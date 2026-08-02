@@ -3,6 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- KODE PENCEGAH CACHE BROWSER -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+
     <title>FR Legends Race Control</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
@@ -32,21 +38,22 @@
             text-transform: uppercase; 
         }
         
-        /* Animasi Kedip Tegas (Patah-patah tanpa Fade) */
+        /* Animasi Kedip Yellow Flag & FCY (Bergantian dengan 80 KM/H) */
         @keyframes blink-yellow-sharp {
             0%, 49% { background-color: #ffc107; color: #000; }
             50%, 100% { background-color: #000000; color: #fff; }
         }
         .blinking-yellow { 
-            animation: blink-yellow-sharp 0.6s steps(1) infinite !important; 
+            animation: blink-yellow-sharp 0.8s steps(1) infinite !important; 
         }
 
+        /* Animasi Kedip Red Flag (Bergantian dengan 50 KM/H & BACK TO PIT) */
         @keyframes blink-red-sharp {
             0%, 49% { background-color: #dc3545; color: #fff; }
             50%, 100% { background-color: #000000; color: #fff; }
         }
         .blinking-red { 
-            animation: blink-red-sharp 0.5s steps(1) infinite !important; 
+            animation: blink-red-sharp 0.6s steps(1) infinite !important; 
         }
 
         /* Tombol Admin */
@@ -75,12 +82,12 @@
     <div id="admin-page" class="page">
         <h2>Panel Race Director</h2>
         <br>
-        <button class="flag-btn green" onclick="setFlag('GREEN FLAG', '#28a745', '#ffffff', '')">GREEN FLAG</button>
-        <button class="flag-btn yellow" onclick="setFlag('YELLOW FLAG', '#ffc107', '#000000', 'blinking-yellow')">YELLOW FLAG (BLINK)</button>
-        <button class="flag-btn fcy" onclick="setFlag('FULL COURSE YELLOW', '#ff9800', '#000000', 'blinking-yellow')">FULL COURSE YELLOW (FCY)</button>
-        <button class="flag-btn red" onclick="setFlag('RED FLAG', '#dc3545', '#ffffff', 'blinking-red')">RED FLAG (BLINK)</button>
-        <button class="flag-btn finish" onclick="setFlag('FINISH / CHEQUERED', '#000000', '#ffffff', '')">FINISH</button>
-        <button class="flag-btn clear" onclick="setFlag('TRACK CLEAR', '#333333', '#ffffff', '')">TRACK CLEAR</button>
+        <button class="flag-btn green" onclick="setFlag('GREEN FLAG', '', '#28a745', '#ffffff', '')">GREEN FLAG (GF)</button>
+        <button class="flag-btn yellow" onclick="setFlag('YELLOW FLAG', 'LIMIT 80 KM/H', '#ffc107', '#000000', 'blinking-yellow')">YELLOW FLAG (YF)</button>
+        <button class="flag-btn fcy" onclick="setFlag('FULL COURSE YELLOW', 'LIMIT 80 KM/H', '#ff9800', '#000000', 'blinking-yellow')">FULL COURSE YELLOW (FCY)</button>
+        <button class="flag-btn red" onclick="setFlag('RED FLAG', '50 KM/H & BACK PIT', '#dc3545', '#ffffff', 'blinking-red')">RED FLAG (RF)</button>
+        <button class="flag-btn finish" onclick="setFlag('FINISH / CHEQUERED', '', '#000000', '#ffffff', '')">FINISH</button>
+        <button class="flag-btn clear" onclick="setFlag('TRACK CLEAR', '', '#333333', '#ffffff', '')">TRACK CLEAR</button>
         <br>
         <button class="back-btn" onclick="showPage('home-menu')">Kembali ke Menu</button>
     </div>
@@ -109,6 +116,8 @@
         }
         const database = firebase.database();
 
+        let blinkInterval = null; // Menyimpan interval pergantian teks
+
         function showPage(pageId) {
             document.getElementById('home-menu').style.display = 'none';
             document.getElementById('admin-page').style.display = 'none';
@@ -122,23 +131,33 @@
             if (pass === ADMIN_PASSWORD) {
                 showPage('admin-page');
             } else if (pass !== null) {
-                alert("Password Salah! Anda tidak memiliki akses ke Panel Admin.");
+                alert("Password Salah blog! hdh driver jangan masuk panel admin cok!.");
             }
         }
 
-        function setFlag(statusText, bgColor, textColor, blinkClass) {
+        // Fungsi Admin Mengirim Status + Teks Alternatif
+        function setFlag(statusText, subText, bgColor, textColor, blinkClass) {
             database.ref('race/status').set({
                 text: statusText,
+                subText: subText || '',
                 bg: bgColor,
                 color: textColor,
                 blink: blinkClass || ''
             });
         }
 
+        // Realtime Listener Driver
         database.ref('race/status').on('value', (snapshot) => {
             const data = snapshot.val();
             if (data) {
                 const display = document.getElementById('flag-display');
+                
+                // Hentikan timernya dulu kalau ada bendera baru yang dikirim
+                if (blinkInterval) {
+                    clearInterval(blinkInterval);
+                    blinkInterval = null;
+                }
+
                 display.innerText = data.text;
                 display.style.backgroundColor = data.bg;
                 display.style.color = data.color;
@@ -146,10 +165,21 @@
                 display.className = '';
                 if (data.blink) {
                     display.classList.add(data.blink);
+
+                    // Jika ada teks tambahan, gantian teksnya tiap kali kelip
+                    if (data.subText) {
+                        let showSub = false;
+                        let intervalSpeed = (data.blink === 'blinking-red') ? 600 : 800;
+                        
+                        blinkInterval = setInterval(() => {
+                            showSub = !showSub;
+                            display.innerText = showSub ? data.subText : data.text;
+                        }, intervalSpeed / 2);
+                    }
                 }
             }
         });
     </script>
 </body>
-    </html>
+            </html>
     
