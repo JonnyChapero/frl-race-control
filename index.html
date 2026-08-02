@@ -3,110 +3,94 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Race Control Flag System</title>
+    <title>FR Legends Race Control</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
-        body { background-color: #121212; color: #ffffff; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+        body { background-color: #121212; color: #fff; text-align: center; padding: 20px; }
+        h1 { margin-bottom: 20px; font-size: 24px; }
+        .nav-btn { display: inline-block; padding: 12px 24px; margin: 10px; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; color: white; }
+        .btn-admin { background-color: #007bff; }
+        .btn-driver { background-color: #28a745; }
+        .page { display: none; margin-top: 20px; }
+        .active { display: block; }
         
-        .mode-select { text-align: center; padding: 20px; }
-        .mode-title { font-size: 22px; font-weight: bold; margin-bottom: 25px; }
-        .mode-btn { display: block; width: 240px; padding: 16px; margin: 12px auto; font-size: 16px; font-weight: bold; border-radius: 8px; border: none; cursor: pointer; }
-        .btn-admin { background: #007bff; color: white; }
-        .btn-driver { background: #28a745; color: white; }
-
-        #admin-panel { display: none; width: 100%; max-width: 450px; padding: 20px; text-align: center; }
-        .grid-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .flag-btn { padding: 18px 10px; font-size: 15px; font-weight: 900; border: none; border-radius: 8px; cursor: pointer; text-transform: uppercase; }
-        .flag-green { background: #00e676; color: #000; }
-        .flag-yellow { background: #ffea00; color: #000; }
-        .flag-red { background: #ff1744; color: #fff; }
-        .flag-fcy { background: #ff9100; color: #000; }
-        .flag-clear { background: #333; color: #fff; grid-column: span 2; border: 1px solid #555; }
-
-        #driver-display { display: none; width: 100vw; height: 100vh; position: fixed; top: 0; left: 0; background: #000; justify-content: center; align-items: center; }
-        .flag-container { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; border: 4px solid #ffffff; }
-        .flag-text { font-size: calc(8vw + 16px); font-weight: 900; font-family: 'Arial Black', Impact, sans-serif; text-transform: uppercase; letter-spacing: 3px; }
-
-        .blink { animation: flash-anim 0.5s infinite alternate; }
-        @keyframes flash-anim { 0% { opacity: 1.0; } 50% { opacity: 0.25; } 100% { opacity: 1.0; } }
+        /* Box Display Bendera Driver */
+        #flag-display { width: 100%; height: 250px; line-height: 250px; font-size: 32px; font-weight: bold; border-radius: 12px; margin-top: 20px; background-color: #333; color: white; text-transform: uppercase; transition: background-color 0.3s ease; }
+        
+        /* Tombol Admin */
+        .flag-btn { width: 80%; padding: 15px; margin: 8px 0; font-size: 18px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; }
+        .green { background-color: #28a745; color: white; }
+        .yellow { background-color: #ffc107; color: black; }
+        .red { background-color: #dc3545; color: white; }
+        .finish { background-color: #000; color: white; border: 2px solid #fff; }
     </style>
 </head>
 <body>
 
-    <div id="mode-selector" class="mode-select">
-        <div class="mode-title">RACE CONTROL SYSTEM</div>
-        <button class="mode-btn btn-admin" onclick="enableMode('admin')">Buka Panel Admin</button>
-        <button class="mode-btn btn-driver" onclick="enableMode('driver')">Buka Tampilan Driver</button>
+    <h1>RACE CONTROL SYSTEM</h1>
+
+    <div>
+        <button class="nav-btn btn-admin" onclick="showPage('admin-page')">Buka Panel Admin</button>
+        <button class="nav-btn btn-driver" onclick="showPage('driver-page')">Buka Tampilan Driver</button>
     </div>
 
-    <div id="admin-panel">
-        <h2 style="margin-bottom:15px;">RACE DIRECTOR</h2>
-        <div class="grid-buttons">
-            <button class="flag-btn flag-green" onclick="sendFlag('GREEN', '#00e676', '#000000')">GREEN FLAG</button>
-            <button class="flag-btn flag-yellow" onclick="sendFlag('YELLOW', '#ffea00', '#000000')">YELLOW FLAG</button>
-            <button class="flag-btn flag-red" onclick="sendFlag('RED', '#ff1744', '#ffffff')">RED FLAG</button>
-            <button class="flag-btn flag-fcy" onclick="sendFlag('FCY', '#ff9100', '#000000')">FULL COURSE YELLOW</button>
-            <button class="flag-btn flag-clear" onclick="sendFlag('CLEAR', '#000000', '#ffffff')">MATIKAN BENDERA</button>
-        </div>
+    <!-- Halaman Admin -->
+    <div id="admin-page" class="page">
+        <h2>Panel Race Director</h2>
+        <br>
+        <button class="flag-btn green" onclick="setFlag('GREEN FLAG', '#28a745', '#ffffff')">GREEN FLAG</button><br>
+        <button class="flag-btn yellow" onclick="setFlag('YELLOW FLAG', '#ffc107', '#000000')">YELLOW FLAG</button><br>
+        <button class="flag-btn red" onclick="setFlag('RED FLAG', '#dc3545', '#ffffff')">RED FLAG</button><br>
+        <button class="flag-btn finish" onclick="setFlag('FINISH / CHEQUERED', '#000000', '#ffffff')">FINISH</button>
     </div>
 
-    <div id="driver-display">
-        <div id="flag-box" class="flag-container">
-            <div id="flag-text" class="flag-text">OFF</div>
-        </div>
+    <!-- Halaman Driver -->
+    <div id="driver-page" class="page">
+        <h2>Tampilan Driver</h2>
+        <div id="flag-display">WAITING RACE...</div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    <!-- Firebase SDK & Script Sistem -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
-        // GANTI LINK DI BAWAH INI DENGAN LINK REALTIME DATABASE KAMU:
+    <script>
+        // Masukkan Konfigurasi Firebase Kamu di Bawah Ini
         const firebaseConfig = {
-            databaseURL: "PASTE_LINK_FIREBASE_KAMU_DI_SINI"
+            databaseURL: "https://frl-race-control-default-rtdb.asia-southeast1.firebasedatabase.app"
         };
+        
+        // Inisialisasi Firebase
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const database = firebase.database();
 
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
+        // Fungsi Perpindahan Halaman
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+        }
 
-        window.enableMode = function(mode) {
-            document.getElementById('mode-selector').style.display = 'none';
-            if (mode === 'admin') {
-                document.getElementById('admin-panel').style.display = 'block';
-            } else if (mode === 'driver') {
-                document.getElementById('driver-display').style.display = 'flex';
-                listenToFlags();
-            }
-        };
-
-        window.sendFlag = function(type, bgColor, textColor) {
-            set(ref(db, 'race_status'), {
-                type: type,
-                bgColor: bgColor,
-                textColor: textColor,
-                timestamp: Date.now()
-            });
-        };
-
-        function listenToFlags() {
-            const raceRef = ref(db, 'race_status');
-            onValue(raceRef, (snapshot) => {
-                const data = snapshot.val();
-                const driverDisplay = document.getElementById('driver-display');
-                const flagBox = document.getElementById('flag-box');
-                const flagText = document.getElementById('flag-text');
-
-                if (data && data.type !== 'CLEAR') {
-                    driverDisplay.style.display = 'flex';
-                    flagBox.style.backgroundColor = data.bgColor;
-                    flagText.style.color = data.textColor;
-                    flagText.innerText = data.type;
-                    flagBox.classList.add('blink');
-                } else {
-                    driverDisplay.style.display = 'none';
-                    flagBox.classList.remove('blink');
-                }
+        // Fungsi Admin Mengirim Bendera ke Firebase
+        function setFlag(statusText, bgColor, textColor) {
+            database.ref('race/status').set({
+                text: statusText,
+                bg: bgColor,
+                color: textColor
             });
         }
+
+        // Realtime Listener untuk Driver
+        database.ref('race/status').on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                const display = document.getElementById('flag-display');
+                display.innerText = data.text;
+                display.style.backgroundColor = data.bg;
+                display.style.color = data.color;
+            }
+        });
     </script>
 </body>
 </html>
