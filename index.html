@@ -12,35 +12,92 @@
     <title>FR Legends Race Control</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
-        body { background-color: #121212; color: #fff; text-align: center; padding: 20px; }
-        h1 { margin-bottom: 20px; font-size: 24px; }
+        body { background-color: #121212; color: #fff; text-align: center; padding: 10px; overflow-x: hidden; }
+        h1 { margin-bottom: 15px; font-size: 20px; }
         
         /* Menu Utama */
-        #home-menu { margin-top: 50px; }
-        .nav-btn { display: block; width: 80%; max-width: 300px; margin: 15px auto; padding: 15px; font-size: 18px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; color: white; }
+        #home-menu { margin-top: 30px; }
+        .nav-btn { display: block; width: 85%; max-width: 300px; margin: 10px auto; padding: 12px; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; color: white; }
         .btn-admin { background-color: #007bff; }
         .btn-driver { background-color: #28a745; }
+        .btn-hud { background-color: #17a2b8; }
         
         /* Halaman Tersembunyi Default */
-        .page { display: none; margin-top: 20px; }
+        .page { display: none; }
         
-        /* Tampilan Driver */
+        /* Tampilan Driver Normal */
         #flag-display { 
             width: 100%; 
-            height: 300px; 
-            line-height: 300px; 
-            font-size: 28px; 
+            height: 250px; 
+            line-height: 250px; 
+            font-size: 26px; 
             font-weight: bold; 
             border-radius: 12px; 
-            margin-top: 20px; 
+            margin-top: 10px; 
             background-color: #333; 
             color: white; 
             text-transform: uppercase; 
-            transition: none; /* Tanpa efek animasi fade agar ganti secara tegas */
+        }
+
+        /* Mode Floating HUD (Responsif Teks Anti-Potong) */
+        body.hud-mode {
+            padding: 0 !important;
+            background-color: #000000 !important;
+        }
+        #driver-hud-page {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #hud-flag-display {
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(12px, 6vw, 22px); /* Teks menyesuaikan ukuran jendela secara otomatis */
+            font-weight: 900;
+            text-transform: uppercase;
+            text-align: center;
+            padding: 5px;
+            word-wrap: break-word;
+            line-height: 1.2;
+        }
+
+        /* Form Password Custom (Bukan Prompt Pop-up) */
+        #password-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            z-index: 999;
+            padding-top: 50px;
+        }
+        .modal-content {
+            background: #222;
+            padding: 20px;
+            border-radius: 10px;
+            width: 85%;
+            max-width: 320px;
+            margin: auto;
+            border: 1px solid #444;
+        }
+        .pass-input {
+            width: 100%;
+            padding: 10px;
+            margin: 15px 0;
+            border-radius: 5px;
+            border: 1px solid #666;
+            background: #111;
+            color: #fff;
+            text-align: center;
+            font-size: 16px;
         }
 
         /* Tombol Admin */
-        .flag-btn { width: 90%; max-width: 350px; padding: 18px; margin: 10px auto; font-size: 18px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; display: block; }
+        .flag-btn { width: 90%; max-width: 350px; padding: 14px; margin: 8px auto; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; display: block; }
         .green { background-color: #28a745; color: white; }
         .yellow { background-color: #ffc107; color: black; }
         .fcy { background-color: #ff9800; color: black; }
@@ -48,39 +105,51 @@
         .finish { background-color: #000; color: white; border: 2px solid #fff; }
         .clear { background-color: #333; color: white; border: 1px solid #555; }
         
-        .back-btn { background-color: #6c757d; color: white; margin-top: 20px; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; }
+        .back-btn { background-color: #6c757d; color: white; margin-top: 15px; padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <h1>RACE CONTROL SYSTEM</h1>
-
     <!-- Menu Utama -->
     <div id="home-menu">
-        <button class="nav-btn btn-admin" onclick="checkAdminPassword()">Buka Panel Admin</button>
-        <button class="nav-btn btn-driver" onclick="showPage('driver-page')">Buka Tampilan Driver</button>
+        <h1>RACE CONTROL SYSTEM</h1>
+        <button class="nav-btn btn-admin" onclick="openPasswordModal()">Panel Admin</button>
+        <button class="nav-btn btn-driver" onclick="showPage('driver-page')">Tampilan Driver (Normal)</button>
+        <button class="nav-btn btn-hud" onclick="enableHUDMode()">Tampilan Driver (Floating HUD)</button>
+    </div>
+
+    <!-- Custom Modal Password Admin -->
+    <div id="password-modal">
+        <div class="modal-content">
+            <h3>Akses Race Director</h3>
+            <input type="password" id="admin-pass-input" class="pass-input" placeholder="Masukkan Password">
+            <button class="nav-btn btn-admin" style="width:100%; padding:10px;" onclick="verifyPassword()">Masuk</button>
+            <button class="back-btn" style="margin-top:5px;" onclick="closePasswordModal()">Batal</button>
+        </div>
     </div>
 
     <!-- Halaman Admin -->
     <div id="admin-page" class="page">
         <h2>Panel Race Director</h2>
-        <br>
         <button class="flag-btn green" onclick="setFlag('GREEN FLAG', '', '#28a745', '#ffffff', false)">GREEN FLAG</button>
         <button class="flag-btn yellow" onclick="setFlag('YELLOW FLAG', 'LIMIT 80 KM/H', '#ffc107', '#000000', true)">YELLOW FLAG (BLINK)</button>
         <button class="flag-btn fcy" onclick="setFlag('FULL COURSE YELLOW', 'LIMIT 80 KM/H', '#ff9800', '#000000', true)">FULL COURSE YELLOW (FCY)</button>
         <button class="flag-btn red" onclick="setFlag('RED FLAG', '50 KM/H & BACK TO PIT', '#dc3545', '#ffffff', true)">RED FLAG (BLINK)</button>
         <button class="flag-btn finish" onclick="setFlag('FINISH / CHEQUERED', '', '#000000', '#ffffff', false)">FINISH</button>
         <button class="flag-btn clear" onclick="setFlag('TRACK CLEAR', '', '#333333', '#ffffff', false)">TRACK CLEAR</button>
-        <br>
-        <button class="back-btn" onclick="showPage('home-menu')">Kembali ke Menu</button>
+        <button class="back-btn" onclick="showPage('home-menu')">Kembali</button>
     </div>
 
-    <!-- Halaman Driver -->
+    <!-- Halaman Driver Normal -->
     <div id="driver-page" class="page">
         <h2>Tampilan Driver</h2>
         <div id="flag-display">WAITING RACE...</div>
-        <br>
-        <button class="back-btn" onclick="showPage('home-menu')">Kembali ke Menu</button>
+        <button class="back-btn" onclick="showPage('home-menu')">Kembali</button>
+    </div>
+
+    <!-- Halaman Driver Mode Floating HUD -->
+    <div id="driver-hud-page" class="page">
+        <div id="hud-flag-display">WAITING...</div>
     </div>
 
     <!-- Firebase SDK & Script -->
@@ -99,26 +168,44 @@
         }
         const database = firebase.database();
 
-        let blinkInterval = null; // Menyimpan timer interval kedip
+        let blinkInterval = null;
 
         function showPage(pageId) {
+            document.body.classList.remove('hud-mode');
             document.getElementById('home-menu').style.display = 'none';
             document.getElementById('admin-page').style.display = 'none';
             document.getElementById('driver-page').style.display = 'none';
+            document.getElementById('driver-hud-page').style.display = 'none';
             
             document.getElementById(pageId).style.display = 'block';
         }
 
-        function checkAdminPassword() {
-            let pass = prompt("Masukkan Password Race Director:");
-            if (pass === ADMIN_PASSWORD) {
+        function enableHUDMode() {
+            showPage('driver-hud-page');
+            document.body.classList.add('hud-mode');
+            document.getElementById('driver-hud-page').style.display = 'flex';
+        }
+
+        /* Fungsi Modal Password Custom (Anti Block Floating App) */
+        function openPasswordModal() {
+            document.getElementById('admin-pass-input').value = '';
+            document.getElementById('password-modal').style.display = 'block';
+        }
+
+        function closePasswordModal() {
+            document.getElementById('password-modal').style.display = 'none';
+        }
+
+        function verifyPassword() {
+            const input = document.getElementById('admin-pass-input').value;
+            if (input === ADMIN_PASSWORD) {
+                closePasswordModal();
                 showPage('admin-page');
-            } else if (pass !== null) {
-                alert("Password Salah! Anda tidak memiliki akses ke Panel Admin.");
+            } else {
+                alert("Password Salah!");
             }
         }
 
-        // Fungsi Admin Mengirim Status
         function setFlag(statusText, subText, bgColor, textColor, isBlinking) {
             database.ref('race/status').set({
                 text: statusText,
@@ -129,13 +216,12 @@
             });
         }
 
-        // Realtime Listener Driver
         database.ref('race/status').on('value', (snapshot) => {
             const data = snapshot.val();
             if (data) {
-                const display = document.getElementById('flag-display');
+                const normalDisplay = document.getElementById('flag-display');
+                const hudDisplay = document.getElementById('hud-flag-display');
                 
-                // Hentikan timer kedip sebelumnya jika ada
                 if (blinkInterval) {
                     clearInterval(blinkInterval);
                     blinkInterval = null;
@@ -144,39 +230,38 @@
                 if (data.blink) {
                     let showFlagState = true;
 
-                    // Fungsi untuk update tampilan secara presisi
                     function updateDisplay() {
-                        if (showFlagState) {
-                            // Tampilan 1: Nama Bendera + Warna Bendera
-                            display.innerText = data.text;
-                            display.style.backgroundColor = data.bg;
-                            display.style.color = data.color;
-                        } else {
-                            // Tampilan 2: Teks Peringatan/Limit + Latar Hitam (Teks Putih)
-                            display.innerText = data.subText;
-                            display.style.backgroundColor = '#000000';
-                            display.style.color = '#ffffff';
-                        }
+                        const currentText = showFlagState ? data.text : data.subText;
+                        const currentBg = showFlagState ? data.bg : '#000000';
+                        const currentColor = showFlagState ? data.color : '#ffffff';
+
+                        normalDisplay.innerText = currentText;
+                        normalDisplay.style.backgroundColor = currentBg;
+                        normalDisplay.style.color = currentColor;
+
+                        hudDisplay.innerText = currentText;
+                        hudDisplay.style.backgroundColor = currentBg;
+                        hudDisplay.style.color = currentColor;
                     }
 
-                    // Tampilkan bendera utama pertama kali
                     updateDisplay();
 
-                    // Berganti tampilan presisi setiap 0.75 detik (750ms)
                     blinkInterval = setInterval(() => {
                         showFlagState = !showFlagState;
                         updateDisplay();
                     }, 750);
 
                 } else {
-                    // Bendera Diam (Tanpa Kedip: Green, Clear, Finish)
-                    display.innerText = data.text;
-                    display.style.backgroundColor = data.bg;
-                    display.style.color = data.color;
+                    normalDisplay.innerText = data.text;
+                    normalDisplay.style.backgroundColor = data.bg;
+                    normalDisplay.style.color = data.color;
+
+                    hudDisplay.innerText = data.text;
+                    hudDisplay.style.backgroundColor = data.bg;
+                    hudDisplay.style.color = data.color;
                 }
             }
         });
     </script>
 </body>
-    </html>
-    
+</html>
