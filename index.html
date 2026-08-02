@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
-    <!-- KODE PENCEGAH CACHE BROWSER -->
+    <!-- PENCEGAH CACHE BROWSER -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -12,20 +12,31 @@
     <title>FR Legends Race Control</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
-        body { background-color: #121212; color: #fff; text-align: center; padding: 10px; overflow-x: hidden; }
-        h1 { margin-bottom: 15px; font-size: 20px; }
+        body { background-color: #121212; color: #fff; text-align: center; padding: 20px; }
+        h1 { margin-bottom: 25px; font-size: 22px; }
         
-        /* Menu Utama */
-        #home-menu { margin-top: 30px; }
-        .nav-btn { display: block; width: 85%; max-width: 300px; margin: 10px auto; padding: 12px; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; color: white; }
+        #home-menu { margin-top: 20px; }
+        .nav-btn { 
+            display: block; 
+            width: 90%; 
+            max-width: 300px; 
+            margin: 15px auto; 
+            padding: 15px; 
+            font-size: 16px; 
+            font-weight: bold; 
+            border: none; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            color: white; 
+            text-decoration: none; 
+        }
         .btn-admin { background-color: #007bff; }
         .btn-driver { background-color: #28a745; }
         .btn-hud { background-color: #17a2b8; }
         
-        /* Halaman Tersembunyi Default */
+        /* SEMUA HALAMAN DI-HIDE DEFAULT */
         .page { display: none; }
         
-        /* Tampilan Driver Normal */
         #flag-display { 
             width: 100%; 
             height: 250px; 
@@ -33,40 +44,13 @@
             font-size: 26px; 
             font-weight: bold; 
             border-radius: 12px; 
-            margin-top: 10px; 
+            margin-top: 15px; 
             background-color: #333; 
             color: white; 
             text-transform: uppercase; 
         }
 
-        /* Mode Floating HUD (Responsif Teks Anti-Potong) */
-        body.hud-mode {
-            padding: 0 !important;
-            background-color: #000000 !important;
-        }
-        #driver-hud-page {
-            width: 100vw;
-            height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        #hud-flag-display {
-            width: 100%;
-            height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: clamp(12px, 6vw, 22px); /* Teks menyesuaikan ukuran jendela secara otomatis */
-            font-weight: 900;
-            text-transform: uppercase;
-            text-align: center;
-            padding: 5px;
-            word-wrap: break-word;
-            line-height: 1.2;
-        }
-
-        /* Form Password Custom (Bukan Prompt Pop-up) */
+        /* Modal Password Admin */
         #password-modal {
             display: none;
             position: fixed;
@@ -96,7 +80,7 @@
             font-size: 16px;
         }
 
-        /* Tombol Admin */
+        /* Tombol Bendera Admin */
         .flag-btn { width: 90%; max-width: 350px; padding: 14px; margin: 8px auto; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; display: block; }
         .green { background-color: #28a745; color: white; }
         .yellow { background-color: #ffc107; color: black; }
@@ -110,46 +94,44 @@
 </head>
 <body>
 
-    <!-- Menu Utama -->
+    <!-- 1. MENU UTAMA (CUMA TOMBOL AJA) -->
     <div id="home-menu">
         <h1>RACE CONTROL SYSTEM</h1>
         <button class="nav-btn btn-admin" onclick="openPasswordModal()">Panel Admin</button>
         <button class="nav-btn btn-driver" onclick="showPage('driver-page')">Tampilan Driver (Normal)</button>
-        <button class="nav-btn btn-hud" onclick="enableHUDMode()">Tampilan Driver (Floating HUD)</button>
+        <a href="hud.html" class="nav-btn btn-hud">Tampilan Driver (Floating HUD)</a>
     </div>
 
-    <!-- Custom Modal Password Admin -->
+    <!-- 2. MODAL PASSWORD ADMIN -->
     <div id="password-modal">
         <div class="modal-content">
             <h3>Akses Race Director</h3>
             <input type="password" id="admin-pass-input" class="pass-input" placeholder="Masukkan Password">
-            <button class="nav-btn btn-admin" style="width:100%; padding:10px;" onclick="verifyPassword()">Masuk</button>
-            <button class="back-btn" style="margin-top:5px;" onclick="closePasswordModal()">Batal</button>
+            <button class="nav-btn btn-admin" style="width:100%; padding:10px; margin:0;" onclick="verifyPassword()">Masuk</button>
+            <button class="back-btn" style="margin-top:10px;" onclick="closePasswordModal()">Batal</button>
         </div>
     </div>
 
-    <!-- Halaman Admin -->
+    <!-- 3. HALAMAN ADMIN (TERSEMBUNYI SAAT HOME) -->
     <div id="admin-page" class="page">
         <h2>Panel Race Director</h2>
+        <br>
         <button class="flag-btn green" onclick="setFlag('GREEN FLAG', '', '#28a745', '#ffffff', false)">GREEN FLAG</button>
         <button class="flag-btn yellow" onclick="setFlag('YELLOW FLAG', 'LIMIT 80 KM/H', '#ffc107', '#000000', true)">YELLOW FLAG (BLINK)</button>
         <button class="flag-btn fcy" onclick="setFlag('FULL COURSE YELLOW', 'LIMIT 80 KM/H', '#ff9800', '#000000', true)">FULL COURSE YELLOW (FCY)</button>
         <button class="flag-btn red" onclick="setFlag('RED FLAG', '50 KM/H & BACK TO PIT', '#dc3545', '#ffffff', true)">RED FLAG (BLINK)</button>
         <button class="flag-btn finish" onclick="setFlag('FINISH / CHEQUERED', '', '#000000', '#ffffff', false)">FINISH</button>
         <button class="flag-btn clear" onclick="setFlag('TRACK CLEAR', '', '#333333', '#ffffff', false)">TRACK CLEAR</button>
-        <button class="back-btn" onclick="showPage('home-menu')">Kembali</button>
+        <br>
+        <button class="back-btn" onclick="showPage('home-menu')">Kembali ke Menu</button>
     </div>
 
-    <!-- Halaman Driver Normal -->
+    <!-- 4. HALAMAN DRIVER NORMAL (TERSEMBUNYI SAAT HOME) -->
     <div id="driver-page" class="page">
         <h2>Tampilan Driver</h2>
         <div id="flag-display">WAITING RACE...</div>
-        <button class="back-btn" onclick="showPage('home-menu')">Kembali</button>
-    </div>
-
-    <!-- Halaman Driver Mode Floating HUD -->
-    <div id="driver-hud-page" class="page">
-        <div id="hud-flag-display">WAITING...</div>
+        <br>
+        <button class="back-btn" onclick="showPage('home-menu')">Kembali ke Menu</button>
     </div>
 
     <!-- Firebase SDK & Script -->
@@ -171,22 +153,17 @@
         let blinkInterval = null;
 
         function showPage(pageId) {
-            document.body.classList.remove('hud-mode');
             document.getElementById('home-menu').style.display = 'none';
             document.getElementById('admin-page').style.display = 'none';
             document.getElementById('driver-page').style.display = 'none';
-            document.getElementById('driver-hud-page').style.display = 'none';
             
-            document.getElementById(pageId).style.display = 'block';
+            if (pageId === 'home-menu') {
+                document.getElementById('home-menu').style.display = 'block';
+            } else {
+                document.getElementById(pageId).style.display = 'block';
+            }
         }
 
-        function enableHUDMode() {
-            showPage('driver-hud-page');
-            document.body.classList.add('hud-mode');
-            document.getElementById('driver-hud-page').style.display = 'flex';
-        }
-
-        /* Fungsi Modal Password Custom (Anti Block Floating App) */
         function openPasswordModal() {
             document.getElementById('admin-pass-input').value = '';
             document.getElementById('password-modal').style.display = 'block';
@@ -220,7 +197,6 @@
             const data = snapshot.val();
             if (data) {
                 const normalDisplay = document.getElementById('flag-display');
-                const hudDisplay = document.getElementById('hud-flag-display');
                 
                 if (blinkInterval) {
                     clearInterval(blinkInterval);
@@ -238,10 +214,6 @@
                         normalDisplay.innerText = currentText;
                         normalDisplay.style.backgroundColor = currentBg;
                         normalDisplay.style.color = currentColor;
-
-                        hudDisplay.innerText = currentText;
-                        hudDisplay.style.backgroundColor = currentBg;
-                        hudDisplay.style.color = currentColor;
                     }
 
                     updateDisplay();
@@ -255,13 +227,10 @@
                     normalDisplay.innerText = data.text;
                     normalDisplay.style.backgroundColor = data.bg;
                     normalDisplay.style.color = data.color;
-
-                    hudDisplay.innerText = data.text;
-                    hudDisplay.style.backgroundColor = data.bg;
-                    hudDisplay.style.color = data.color;
                 }
             }
         });
     </script>
 </body>
-</html>
+    </html>
+    
