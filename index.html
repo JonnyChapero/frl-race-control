@@ -30,25 +30,23 @@
             background-color: #333; 
             color: white; 
             text-transform: uppercase; 
-            transition: background-color 0.3s ease; 
         }
         
-        /* Animasi Berkedip Kuning - Hitam untuk Yellow Flag & FCY */
-        @keyframes blink-yellow {
-            0%, 100% { background-color: #ffc107; color: #000; }
-            50% { background-color: #000000; color: #fff; }
+        /* Animasi Kedip Tegas (Patah-patah tanpa Fade) */
+        @keyframes blink-yellow-sharp {
+            0%, 49% { background-color: #ffc107; color: #000; }
+            50%, 100% { background-color: #000000; color: #fff; }
         }
-        .blinking-yellow {
-            animation: blink-yellow 0.8s infinite !important;
+        .blinking-yellow { 
+            animation: blink-yellow-sharp 0.6s steps(1) infinite !important; 
         }
 
-        /* Animasi Berkedip Merah - Hitam untuk Red Flag */
-        @keyframes blink-red {
-            0%, 100% { background-color: #dc3545; color: #fff; }
-            50% { background-color: #000000; color: #fff; }
+        @keyframes blink-red-sharp {
+            0%, 49% { background-color: #dc3545; color: #fff; }
+            50%, 100% { background-color: #000000; color: #fff; }
         }
-        .blinking-red {
-            animation: blink-red 0.6s infinite !important;
+        .blinking-red { 
+            animation: blink-red-sharp 0.5s steps(1) infinite !important; 
         }
 
         /* Tombol Admin */
@@ -69,7 +67,7 @@
 
     <!-- Menu Utama -->
     <div id="home-menu">
-        <button class="nav-btn btn-admin" onclick="showPage('admin-page')">Buka Panel Admin</button>
+        <button class="nav-btn btn-admin" onclick="checkAdminPassword()">Buka Panel Admin</button>
         <button class="nav-btn btn-driver" onclick="showPage('driver-page')">Buka Tampilan Driver</button>
     </div>
 
@@ -100,6 +98,8 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <script>
+        const ADMIN_PASSWORD = "wildunnigga123";
+
         const firebaseConfig = {
             databaseURL: "https://frl-race-control-default-rtdb.asia-southeast1.firebasedatabase.app"
         };
@@ -117,7 +117,15 @@
             document.getElementById(pageId).style.display = 'block';
         }
 
-        // Fungsi Admin Mengirim Status + Kelas Animasi Kedip
+        function checkAdminPassword() {
+            let pass = prompt("Masukkan Password Race Director:");
+            if (pass === ADMIN_PASSWORD) {
+                showPage('admin-page');
+            } else if (pass !== null) {
+                alert("Password Salah! Anda tidak memiliki akses ke Panel Admin.");
+            }
+        }
+
         function setFlag(statusText, bgColor, textColor, blinkClass) {
             database.ref('race/status').set({
                 text: statusText,
@@ -127,7 +135,6 @@
             });
         }
 
-        // Realtime Listener Driver
         database.ref('race/status').on('value', (snapshot) => {
             const data = snapshot.val();
             if (data) {
@@ -136,8 +143,7 @@
                 display.style.backgroundColor = data.bg;
                 display.style.color = data.color;
                 
-                // Setel Efek Berkedip
-                display.className = ''; // Reset class lama
+                display.className = '';
                 if (data.blink) {
                     display.classList.add(data.blink);
                 }
@@ -145,5 +151,5 @@
         });
     </script>
 </body>
-                                                                                     </html>
+    </html>
     
