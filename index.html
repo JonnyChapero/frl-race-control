@@ -38,22 +38,22 @@
             text-transform: uppercase; 
         }
         
-        /* Animasi Kedip Yellow Flag & FCY (Bergantian dengan 80 KM/H) */
+        /* Animasi Kedip Yellow Flag & FCY (Durasi 1.5 Detik) */
         @keyframes blink-yellow-sharp {
             0%, 49% { background-color: #ffc107; color: #000; }
             50%, 100% { background-color: #000000; color: #fff; }
         }
         .blinking-yellow { 
-            animation: blink-yellow-sharp 0.8s steps(1) infinite !important; 
+            animation: blink-yellow-sharp 1.5s steps(1) infinite !important; 
         }
 
-        /* Animasi Kedip Red Flag (Bergantian dengan 50 KM/H & BACK TO PIT) */
+        /* Animasi Kedip Red Flag (Durasi 1.5 Detik) */
         @keyframes blink-red-sharp {
             0%, 49% { background-color: #dc3545; color: #fff; }
             50%, 100% { background-color: #000000; color: #fff; }
         }
         .blinking-red { 
-            animation: blink-red-sharp 0.6s steps(1) infinite !important; 
+            animation: blink-red-sharp 1.5s steps(1) infinite !important; 
         }
 
         /* Tombol Admin */
@@ -82,10 +82,10 @@
     <div id="admin-page" class="page">
         <h2>Panel Race Director</h2>
         <br>
-        <button class="flag-btn green" onclick="setFlag('GREEN FLAG', '', '#28a745', '#ffffff', '')">GREEN FLAG (GF)</button>
-        <button class="flag-btn yellow" onclick="setFlag('YELLOW FLAG', 'LIMIT 80 KM/H', '#ffc107', '#000000', 'blinking-yellow')">YELLOW FLAG (YF)</button>
+        <button class="flag-btn green" onclick="setFlag('GREEN FLAG', '', '#28a745', '#ffffff', '')">GREEN FLAG</button>
+        <button class="flag-btn yellow" onclick="setFlag('YELLOW FLAG', 'LIMIT 80 KM/H', '#ffc107', '#000000', 'blinking-yellow')">YELLOW FLAG (BLINK)</button>
         <button class="flag-btn fcy" onclick="setFlag('FULL COURSE YELLOW', 'LIMIT 80 KM/H', '#ff9800', '#000000', 'blinking-yellow')">FULL COURSE YELLOW (FCY)</button>
-        <button class="flag-btn red" onclick="setFlag('RED FLAG', '50 KM/H & BACK PIT', '#dc3545', '#ffffff', 'blinking-red')">RED FLAG (RF)</button>
+        <button class="flag-btn red" onclick="setFlag('RED FLAG', '50 KM/H & BACK TO PIT', '#dc3545', '#ffffff', 'blinking-red')">RED FLAG (BLINK)</button>
         <button class="flag-btn finish" onclick="setFlag('FINISH / CHEQUERED', '', '#000000', '#ffffff', '')">FINISH</button>
         <button class="flag-btn clear" onclick="setFlag('TRACK CLEAR', '', '#333333', '#ffffff', '')">TRACK CLEAR</button>
         <br>
@@ -131,7 +131,7 @@
             if (pass === ADMIN_PASSWORD) {
                 showPage('admin-page');
             } else if (pass !== null) {
-                alert("Password Salah blog! hdh driver jangan masuk panel admin cok!.");
+                alert("Password Salah blog! driver jan maksa masuk panel admin anj.");
             }
         }
 
@@ -166,20 +166,19 @@
                 if (data.blink) {
                     display.classList.add(data.blink);
 
-                    // Jika ada teks tambahan, gantian teksnya tiap kali kelip
+                    // Jika ada teks tambahan, bergantian teks setiap 0.75 detik (Total 1 siklus = 1.5 detik)
                     if (data.subText) {
                         let showSub = false;
-                        let intervalSpeed = (data.blink === 'blinking-red') ? 600 : 800;
                         
                         blinkInterval = setInterval(() => {
                             showSub = !showSub;
                             display.innerText = showSub ? data.subText : data.text;
-                        }, intervalSpeed / 2);
+                        }, 750); // 750ms menyala bendera, 750ms menyala teks kecepatan
                     }
                 }
             }
         });
     </script>
 </body>
-            </html>
+    </html>
     
