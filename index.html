@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
+    <!-- PENCEGAH CACHE BROWSER -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -24,10 +25,11 @@
             align-items: center; 
             justify-content: center; 
             position: fixed; 
-            top: 0; left: 0; 
+            top: 0; left: 0; right: 0; bottom: 0;
             width: 100vw; height: 100vh; 
-            z-index: 100; 
-            background-color: #000; 
+            z-index: 999999; 
+            background-color: #000;
+            overflow: hidden;
         }
 
         h1, h2, h3 { margin-bottom: 15px; }
@@ -65,19 +67,19 @@
 
         /* BOX BENDERA DRIVER */
         #flag-display { 
-            width: 100vw; 
-            height: 100vh; 
+            width: 100%; 
+            height: 100%; 
             display: flex; 
             flex-direction: column;
             align-items: center; 
             justify-content: center; 
-            font-size: clamp(16px, 8vw, 28px); 
+            font-size: clamp(14px, 6vw, 24px); 
             font-weight: 900; 
             text-transform: uppercase; 
             text-align: center; 
-            padding: 10px; 
+            padding: 5px; 
             word-wrap: break-word; 
-            line-height: 1.3; 
+            line-height: 1.2; 
             color: white; 
             background-color: #333; 
         }
@@ -136,6 +138,7 @@
         }
 
         .back-btn { background-color: #6c757d; color: white; margin-top: 15px; padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer; }
+        .reset-btn { background-color: #dc3545; color: white; padding: 8px 14px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -144,7 +147,7 @@
     <div id="home-menu" class="page active">
         <h1>RACE CONTROL SYSTEM</h1>
         <button class="nav-btn btn-admin" onclick="openPasswordModal()">Panel Admin</button>
-        <button class="nav-btn btn-driver" onclick="showPage('driver-setup')">Tampilan Driver</button>
+        <button class="nav-btn btn-driver" onclick="handleDriverClick()">Tampilan Driver</button>
     </div>
 
     <!-- 2. MODAL PASSWORD ADMIN -->
@@ -160,6 +163,7 @@
     <!-- 3. DRIVER SETUP (ISI NAMA & NOMOR MOBIL) -->
     <div id="driver-setup" class="page">
         <h2>Registrasi Driver</h2>
+        <p style="font-size:12px; color:#aaa; margin-bottom:10px;">Sekali terdaftar, nomor tidak dapat diubah sendiri.</p>
         <input type="text" id="driver-name" class="input-box" placeholder="Nama Driver">
         <input type="number" id="driver-number" class="input-box" placeholder="Nomor Mobil (contoh: 05)">
         <button class="nav-btn btn-driver" onclick="registerDriver()">MASUK LINTASAN</button>
@@ -186,7 +190,9 @@
                 <i style="font-size:12px; color:#888;">Belum ada driver terhubung...</i>
             </div>
             <br>
-            <button class="back-btn" style="background:#d9534f;" onclick="clearAllBlueFlags()">Reset Semua Blue Flag</button>
+            <button class="back-btn" style="background:#ff9800; color:#000;" onclick="clearAllBlueFlags()">Reset Status Blue Flag</button>
+            <br>
+            <button class="reset-btn" onclick="removeAllDrivers()">Hapus/Reset Daftar Driver</button>
         </div>
 
         <button class="back-btn" onclick="showPage('home-menu')">Kembali ke Menu</button>
@@ -216,7 +222,7 @@
         }
         const database = firebase.database();
 
-        let myDriverNumber = "";
+        let myDriverNumber = localStorage.getItem('registered_driver_num') || "";
         let blinkInterval = null;
 
         function showPage(pageId, addHistory = true) {
@@ -238,6 +244,17 @@
             }
         });
 
+        // CEK OOTOMATIS APAPAH DRIVER SUDAH DAFTAR
+        function handleDriverClick() {
+            if (myDriverNumber) {
+                // Jika sudah ada data terdaftar di HP, langsung lempar ke layar bendera
+                showPage('driver-page');
+            } else {
+                // Jika belum, ke form registrasi
+                showPage('driver-setup');
+            }
+        }
+
         function openPasswordModal() {
             document.getElementById('admin-pass-input').value = '';
             document.getElementById('password-modal').style.display = 'block';
@@ -257,7 +274,7 @@
             }
         }
 
-        // DRIVER MENGISI NAMA & NOMOR
+        // REGISTRASI DRIVER BARU
         function registerDriver() {
             const name = document.getElementById('driver-name').value.trim();
             const num = document.getElementById('driver-number').value.trim();
@@ -267,20 +284,28 @@
                 return;
             }
 
-            myDriverNumber = num;
+            // Cek apakah nomor sudah terpakai oleh driver lain di Firebase
+            database.ref('race/drivers/' + num).once('value', (snapshot) => {
+                if (snapshot.exists()) {
+                    alert("Nomor Mobil #" + num + " sudah digunakan driver lain! Silakan pilih nomor lain.");
+                } else {
+                    // Simpan di memori lokal HP
+                    localStorage.setItem('registered_driver_num', num);
+                    myDriverNumber = num;
 
-            // Simpan driver ke Firebase agar Admin tahu siapa aja yang aktif
-            database.ref('race/drivers/' + num).set({
-                name: name,
-                number: num
+                    // Simpan di Firebase
+                    database.ref('race/drivers/' + num).set({
+                        name: name,
+                        number: num
+                    });
+
+                    showPage('driver-page');
+                }
             });
-
-            showPage('driver-page');
         }
 
-        // BENDERA GLOBAL (UNTUK SEMUA DRIVER)
+        // BENDERA GLOBAL
         function setGlobalFlag(statusText, subText, bgColor, textColor, isBlinking) {
-            // Hapus status Blue Flag saat bendera global diubah
             database.ref('race/blue_flags').remove();
 
             database.ref('race/status').set({
@@ -292,14 +317,14 @@
             });
         }
 
-        // TOGGLE BLUE FLAG KHUSUS NOMOR CERTERTU
+        // TOGGLE BLUE FLAG
         function toggleBlueFlag(driverNum) {
             const ref = database.ref('race/blue_flags/' + driverNum);
             ref.once('value', (snapshot) => {
                 if (snapshot.exists()) {
-                    ref.remove(); // Matikan Blue Flag kalau dipencet lagi
+                    ref.remove();
                 } else {
-                    ref.set(true); // Aktifkan Blue Flag
+                    ref.set(true);
                 }
             });
         }
@@ -308,18 +333,31 @@
             database.ref('race/blue_flags').remove();
         }
 
+        // HAPUS SEMUA DRIVER DARI PANEL ADMIN (RESET SETELAH RACE)
+        function removeAllDrivers() {
+            if (confirm("Yakin ingin menghapus SELURUH daftar driver dari session ini?")) {
+                database.ref('race/drivers').remove();
+                database.ref('race/blue_flags').remove();
+            }
+        }
+
         // LISTEN DAFTAR DRIVER UNTUK PANEL ADMIN
         database.ref('race/drivers').on('value', (snapshot) => {
             const listDiv = document.getElementById('driver-buttons-list');
-            listDiv.innerHTML = '';
-
             const drivers = snapshot.val();
+            
+            // Jika Admin baru saja menghapus daftar driver dari Firebase, 
+            // hapus juga registrasi lokal di HP driver jika daftar tersebut kosong
+            if (!drivers && myDriverNumber) {
+                localStorage.removeItem('registered_driver_num');
+                myDriverNumber = "";
+            }
+
             if (!drivers) {
                 listDiv.innerHTML = '<i style="font-size:12px; color:#888;">Belum ada driver terhubung...</i>';
                 return;
             }
 
-            // Dapatkan list siapa saja yang kena Blue Flag
             database.ref('race/blue_flags').on('value', (blueSnap) => {
                 const blueList = blueSnap.val() || {};
                 listDiv.innerHTML = '';
@@ -357,9 +395,8 @@
                 blinkInterval = null;
             }
 
-            // CEK APAKAH NOMOR MOBIL HP INI KENA BLUE FLAG?
+            // APAKAH HP INI KENA BLUE FLAG?
             if (myDriverNumber && blueFlags[myDriverNumber]) {
-                // TAMPILAN BLUE FLAG KHUSUS HP INI
                 let isBlue = true;
                 mainText.innerText = "BLUE FLAG";
                 subText.innerText = "GIVE WAY TO LEADER!";
@@ -371,7 +408,6 @@
                 }, 500);
 
             } else if (globalStatus.blink) {
-                // BENDERA GLOBAL BERKEDIP (YELLOW / RED / FCY)
                 let showState = true;
 
                 function updateBlink() {
@@ -388,7 +424,6 @@
                 }, 750);
 
             } else {
-                // BENDERA GLOBAL NORMAL (GREEN / CLEAR / FINISH)
                 mainText.innerText = globalStatus.text || "WAITING...";
                 subText.innerText = globalStatus.subText || "";
                 display.style.backgroundColor = globalStatus.bg || "#333333";
@@ -397,4 +432,5 @@
         });
     </script>
 </body>
-</html>
+    </html>
+    
