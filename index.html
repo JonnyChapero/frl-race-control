@@ -109,8 +109,8 @@
 
         .flag-btn { width: 90%; max-width: 350px; padding: 14px; margin: 8px auto; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; display: block; }
         .green { background-color: #28a745; color: white; }
-        .yellow-admin { background-color: #ffc107; color: #ffffff; } /* Kuning, Teks Putih */
-        .fcy-admin { background-color: #ff9800; color: #ffffff; }     /* Oranye, Teks Putih */
+        .yellow-admin { background-color: #ffc107; color: #ffffff; } 
+        .fcy-admin { background-color: #ff9800; color: #ffffff; }     
         .red { background-color: #dc3545; color: white; }
         .finish { background-color: #000; color: white; border: 2px solid #fff; }
         .clear { background-color: #333; color: white; border: 1px solid #555; }
@@ -134,6 +134,18 @@
             border-radius: 5px;
             font-weight: bold;
             cursor: pointer;
+        }
+
+        .penalty-btn {
+            background-color: #ff3333;
+            color: white;
+            border: none;
+            padding: 10px;
+            margin: 5px;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 45%;
         }
 
         .back-btn { background-color: #6c757d; color: white; margin-top: 15px; padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer; }
@@ -180,6 +192,18 @@
         <button class="flag-btn finish" onclick="setGlobalFlag('FINISH / CHEQUERED', '', '#000000', '#ffffff', false, 'standard')">FINISH</button>
         <button class="flag-btn clear" onclick="setGlobalFlag('TRACK CLEAR', '', '#333333', '#ffffff', false, 'standard')">TRACK CLEAR</button>
 
+        <!-- FITUR PENALTY TARGET -->
+        <div class="admin-section" style="border-color: #ff3333;">
+            <h3 style="color:#ff4444;">QUICK PENALTY SYSTEM</h3>
+            <p style="font-size:12px; color:#ccc; margin-bottom:10px;">Kirim Peringatan / Penalti Suara ke Driver:</p>
+            <input type="number" id="penalty-driver-num" class="input-box" placeholder="No Mobil Target (cth: 05)" style="margin-bottom:8px;">
+            <div>
+                <button class="penalty-btn" onclick="sendPenalty('WARNING', '+5 SEC PENALTY')">+5s Penalty</button>
+                <button class="penalty-btn" onclick="sendPenalty('PENALTY', 'DRIVE THROUGH')">Drive Through</button>
+            </div>
+            <button class="back-btn" style="background:#555; color:#fff; width:100%; margin-top:8px;" onclick="clearPenalty()">Clear Penalty Target</button>
+        </div>
+
         <div class="admin-section">
             <h3 style="color:#00aaff;">BLUE FLAG TARGET</h3>
             <p style="font-size:12px; color:#ccc; margin-bottom:10px;">Pilih driver yang harus memberi jalan:</p>
@@ -221,8 +245,32 @@
 
         let myDriverNumber = localStorage.getItem('registered_driver_num') || "";
         let blinkInterval = null;
+        let soundInterval = null;
         let currentDrivers = {};
         let currentBlueFlags = {};
+
+        // INI FUNGSI SUARA BEEP PERINGATAN (Web Audio API)
+        function playWarningBeep() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(880, audioCtx.currentTime); // Frekuensi nada BEEP tinggi
+                
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.3);
+            } catch(e) {
+                console.log("Audio Error:", e);
+            }
+        }
 
         window.addEventListener('DOMContentLoaded', function() {
             if (myDriverNumber) {
@@ -333,6 +381,7 @@
 
         function setGlobalFlag(statusText, subText, bgColor, textColor, isBlinking, modeType) {
             database.ref('race/blue_flags').remove();
+            database.ref('race/penalties').remove();
 
             database.ref('race/status').set({
                 text: statusText,
@@ -342,6 +391,32 @@
                 blink: isBlinking || false,
                 mode: modeType || 'standard'
             });
+        }
+
+        function sendPenalty(typeText, subText) {
+            const num = document.getElementById('penalty-driver-num').value.trim();
+            if (!num) {
+                alert("Masukkan Nomor Mobil Target Penalti!");
+                return;
+            }
+
+            database.ref('race/penalties/' + num).set({
+                title: typeText,
+                detail: subText
+            });
+
+            alert("Penalti dikirim ke Mobil #" + num);
+        }
+
+        function clearPenalty() {
+            const num = document.getElementById('penalty-driver-num').value.trim();
+            if (num) {
+                database.ref('race/penalties/' + num).remove();
+                alert("Penalti Mobil #" + num + " Dibersihkan!");
+            } else {
+                database.ref('race/penalties').remove();
+                alert("Seluruh Penalti Dibersihkan!");
+            }
         }
 
         function toggleBlueFlag(driverNum) {
@@ -363,6 +438,7 @@
             if (confirm("Yakin ingin menghapus SELURUH daftar driver dari session ini?")) {
                 database.ref('race/drivers').remove();
                 database.ref('race/blue_flags').remove();
+                database.ref('race/penalties').remove();
             }
         }
 
@@ -412,6 +488,7 @@
 
             const globalStatus = data.status || {};
             const blueFlags = data.blue_flags || {};
+            const penalties = data.penalties || {};
 
             const display = document.getElementById('flag-display');
             const mainText = document.getElementById('main-text');
@@ -423,8 +500,32 @@
                 clearInterval(blinkInterval);
                 blinkInterval = null;
             }
+            if (soundInterval) {
+                clearInterval(soundInterval);
+                soundInterval = null;
+            }
 
-            if (myDriverNumber && blueFlags[myDriverNumber]) {
+            // PRIORITAS 1: JIKA DRIVER KENA PENALTY (ADA SUARA BEEP)
+            if (myDriverNumber && penalties[myDriverNumber]) {
+                const pen = penalties[myDriverNumber];
+                let isRed = true;
+                
+                mainText.innerText = pen.title || "PENALTY";
+                subText.innerText = pen.detail || "CHECK RACE CONTROL";
+
+                // Play suara Beep pertama kali
+                playWarningBeep();
+
+                // Kedip & Bunyi Beep berulang tiap 600ms
+                blinkInterval = setInterval(function() {
+                    display.style.backgroundColor = isRed ? "#ff0000" : "#000000";
+                    display.style.color = "#ffffff";
+                    if (isRed) playWarningBeep();
+                    isRed = !isRed;
+                }, 600);
+
+            // PRIORITAS 2: BLUE FLAG
+            } else if (myDriverNumber && blueFlags[myDriverNumber]) {
                 let isBlue = true;
                 mainText.innerText = "BLUE FLAG";
                 subText.innerText = "GIVE WAY TO LEADER!";
@@ -435,13 +536,13 @@
                     isBlue = !isBlue;
                 }, 500);
 
+            // PRIORITAS 3: BENDERA GLOBAL
             } else if (globalStatus.blink) {
                 let step = 0;
                 const mode = globalStatus.mode || 'standard';
 
                 function updateBlink() {
                     if (mode === 'fcy') {
-                        // FCY: 4 langkah (Interval 1.7 detik)
                         if (step === 0) {
                             mainText.innerText = "FULL COURSE YELLOW";
                             subText.innerText = "";
@@ -466,37 +567,34 @@
                         step = (step + 1) % 4;
 
                     } else if (mode === 'yellow-blink') {
-                        // Yellow Flag (1.5 detik): Kedip Kuning vs Hitam
                         if (step === 0) {
                             mainText.innerText = "YELLOW FLAG";
-                            subText.innerText = ""; // Bersih tanpa "80 KM/H" di layar kuning
+                            subText.innerText = "";
                             display.style.backgroundColor = globalStatus.bg || "#ffc107";
                             display.style.color = "#000000";
                         } else {
                             mainText.innerText = "80 KM/H";
                             subText.innerText = "";
-                            display.style.backgroundColor = "#000000"; // Hitam
+                            display.style.backgroundColor = "#000000";
                             display.style.color = "#ffffff";
                         }
                         step = (step + 1) % 2;
 
                     } else if (mode === 'red-blink') {
-                        // Red Flag (1.5 detik): Kedip Merah vs Hitam
                         if (step === 0) {
                             mainText.innerText = "RED FLAG";
-                            subText.innerText = ""; // Bersih di layar merah
+                            subText.innerText = "";
                             display.style.backgroundColor = globalStatus.bg || "#dc3545";
                             display.style.color = "#ffffff";
                         } else {
                             mainText.innerText = "BACK TO PIT";
-                            subText.innerText = ""; // "BACK TO PIT" di layar hitam
-                            display.style.backgroundColor = "#000000"; // Hitam
+                            subText.innerText = "";
+                            display.style.backgroundColor = "#000000";
                             display.style.color = "#ffffff";
                         }
                         step = (step + 1) % 2;
 
                     } else {
-                        // Standar Blink
                         if (step === 0) {
                             mainText.innerText = globalStatus.text;
                             subText.innerText = globalStatus.subText || "";
@@ -514,10 +612,9 @@
 
                 updateBlink();
 
-                // Tentukan kecepatan interval berdasarkan mode
-                let intervalTime = 1500; // 1.5 detik untuk Yellow & Red
+                let intervalTime = 1500;
                 if (mode === 'fcy') {
-                    intervalTime = 1700; // 1.7 detik khusus FCY
+                    intervalTime = 1700;
                 }
 
                 blinkInterval = setInterval(updateBlink, intervalTime);
