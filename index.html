@@ -13,9 +13,15 @@
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
         body { background-color: #121212; color: #fff; text-align: center; padding: 20px; }
+        
+        /* SEMUA HALAMAN TERSEMBUNYI SCR DEFAULT */
+        .page { display: none; }
+        
+        /* CUMA HOME MENU YANG TAMPIL AWAL */
+        #home-menu { display: block; margin-top: 20px; }
+        
         h1 { margin-bottom: 25px; font-size: 22px; }
         
-        #home-menu { margin-top: 20px; }
         .nav-btn { 
             display: block; 
             width: 90%; 
@@ -28,14 +34,10 @@
             border-radius: 8px; 
             cursor: pointer; 
             color: white; 
-            text-decoration: none; 
         }
         .btn-admin { background-color: #007bff; }
         .btn-driver { background-color: #28a745; }
         .btn-hud { background-color: #17a2b8; }
-        
-        /* SEMUA HALAMAN DI-HIDE DEFAULT */
-        .page { display: none; }
         
         #flag-display { 
             width: 100%; 
@@ -50,7 +52,7 @@
             text-transform: uppercase; 
         }
 
-        /* Modal Password Admin */
+        /* MODAL PASSWORD ADMIN */
         #password-modal {
             display: none;
             position: fixed;
@@ -80,7 +82,7 @@
             font-size: 16px;
         }
 
-        /* Tombol Bendera Admin */
+        /* TOMBOL BENDERA ADMIN */
         .flag-btn { width: 90%; max-width: 350px; padding: 14px; margin: 8px auto; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; display: block; }
         .green { background-color: #28a745; color: white; }
         .yellow { background-color: #ffc107; color: black; }
@@ -90,16 +92,38 @@
         .clear { background-color: #333; color: white; border: 1px solid #555; }
         
         .back-btn { background-color: #6c757d; color: white; margin-top: 15px; padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer; }
+
+        /* TAMPILAN KHUSUS FLOATING HUD */
+        body.hud-active {
+            padding: 0 !important;
+            background-color: #000000 !important;
+            overflow: hidden;
+        }
+        #hud-flag-display {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(12px, 6vw, 22px);
+            font-weight: 900;
+            text-transform: uppercase;
+            text-align: center;
+            padding: 4px;
+            word-wrap: break-word;
+            line-height: 1.2;
+            color: #ffffff;
+        }
     </style>
 </head>
 <body>
 
-    <!-- 1. MENU UTAMA (CUMA TOMBOL AJA) -->
-    <div id="home-menu">
+    <!-- 1. MENU UTAMA -->
+    <div id="home-menu" class="page">
         <h1>RACE CONTROL SYSTEM</h1>
         <button class="nav-btn btn-admin" onclick="openPasswordModal()">Panel Admin</button>
         <button class="nav-btn btn-driver" onclick="showPage('driver-page')">Tampilan Driver (Normal)</button>
-        <a href="hud.html" class="nav-btn btn-hud">Tampilan Driver (Floating HUD)</a>
+        <button class="nav-btn btn-hud" onclick="openHUDMode()">Tampilan Driver (Floating HUD)</button>
     </div>
 
     <!-- 2. MODAL PASSWORD ADMIN -->
@@ -112,7 +136,7 @@
         </div>
     </div>
 
-    <!-- 3. HALAMAN ADMIN (TERSEMBUNYI SAAT HOME) -->
+    <!-- 3. HALAMAN ADMIN -->
     <div id="admin-page" class="page">
         <h2>Panel Race Director</h2>
         <br>
@@ -126,12 +150,17 @@
         <button class="back-btn" onclick="showPage('home-menu')">Kembali ke Menu</button>
     </div>
 
-    <!-- 4. HALAMAN DRIVER NORMAL (TERSEMBUNYI SAAT HOME) -->
+    <!-- 4. HALAMAN DRIVER NORMAL -->
     <div id="driver-page" class="page">
         <h2>Tampilan Driver</h2>
         <div id="flag-display">WAITING RACE...</div>
         <br>
         <button class="back-btn" onclick="showPage('home-menu')">Kembali ke Menu</button>
+    </div>
+
+    <!-- 5. HALAMAN FLOATING HUD -->
+    <div id="driver-hud-page" class="page">
+        <div id="hud-flag-display">WAITING...</div>
     </div>
 
     <!-- Firebase SDK & Script -->
@@ -152,16 +181,21 @@
 
         let blinkInterval = null;
 
+        function hideAllPages() {
+            document.body.classList.remove('hud-active');
+            const pages = document.querySelectorAll('.page');
+            pages.forEach(p => p.style.display = 'none');
+        }
+
         function showPage(pageId) {
-            document.getElementById('home-menu').style.display = 'none';
-            document.getElementById('admin-page').style.display = 'none';
-            document.getElementById('driver-page').style.display = 'none';
-            
-            if (pageId === 'home-menu') {
-                document.getElementById('home-menu').style.display = 'block';
-            } else {
-                document.getElementById(pageId).style.display = 'block';
-            }
+            hideAllPages();
+            document.getElementById(pageId).style.display = 'block';
+        }
+
+        function openHUDMode() {
+            hideAllPages();
+            document.body.classList.add('hud-active');
+            document.getElementById('driver-hud-page').style.display = 'block';
         }
 
         function openPasswordModal() {
@@ -197,6 +231,7 @@
             const data = snapshot.val();
             if (data) {
                 const normalDisplay = document.getElementById('flag-display');
+                const hudDisplay = document.getElementById('hud-flag-display');
                 
                 if (blinkInterval) {
                     clearInterval(blinkInterval);
@@ -214,6 +249,10 @@
                         normalDisplay.innerText = currentText;
                         normalDisplay.style.backgroundColor = currentBg;
                         normalDisplay.style.color = currentColor;
+
+                        hudDisplay.innerText = currentText;
+                        hudDisplay.style.backgroundColor = currentBg;
+                        hudDisplay.style.color = currentColor;
                     }
 
                     updateDisplay();
@@ -227,10 +266,14 @@
                     normalDisplay.innerText = data.text;
                     normalDisplay.style.backgroundColor = data.bg;
                     normalDisplay.style.color = data.color;
+
+                    hudDisplay.innerText = data.text;
+                    hudDisplay.style.backgroundColor = data.bg;
+                    hudDisplay.style.color = data.color;
                 }
             }
         });
     </script>
 </body>
-    </html>
-    
+        </html>
+            
