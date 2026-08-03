@@ -11,7 +11,7 @@
 
     <title>FR Legends Race Control</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Arial Black', Arial, sans-serif; }
         body { background-color: #121212; color: #fff; text-align: center; padding: 20px; }
         
         .page { display: none !important; }
@@ -64,6 +64,7 @@
             display: block;
         }
 
+        /* ELEMEN UTAMA DISPLAY DRIVER */
         #flag-display { 
             width: 100%; 
             height: 100%; 
@@ -75,12 +76,32 @@
             font-weight: 900; 
             text-transform: uppercase; 
             text-align: center; 
-            padding: 5px; 
+            padding: 20px; 
             word-wrap: break-word; 
             line-height: 1.2; 
             color: white; 
             background-color: #333; 
         }
+
+        /* STOPWATCH OVERLAY HUD LAYAR DRIVER */
+        #timer-hud {
+            position: absolute;
+            top: 32%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #000000;
+            color: #ffffff;
+            padding: 8px 24px;
+            border-radius: 6px;
+            font-size: clamp(22px, 5vw, 36px);
+            font-weight: 900;
+            letter-spacing: 2px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            z-index: 1000000;
+            display: block;
+            border: 2px solid #222;
+        }
+
         .sub-text-display {
             font-size: clamp(12px, 4vw, 18px);
             font-weight: bold;
@@ -113,15 +134,25 @@
         .finish { background-color: #000; color: white; border: 2px solid #fff; }
         .clear { background-color: #333; color: white; border: 1px solid #555; }
         
-        .blue-section {
+        .admin-section {
             background: #1a233a;
             border: 1px solid #2a3b66;
             padding: 15px;
             border-radius: 10px;
-            margin: 20px auto;
+            margin: 15px auto;
             width: 90%;
             max-width: 350px;
         }
+        .timer-btn {
+            padding: 10px 15px;
+            margin: 4px;
+            border-radius: 6px;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+            color: white;
+        }
+
         .driver-blue-btn {
             background-color: #0056b3;
             color: white;
@@ -169,6 +200,15 @@
     <!-- 4. HALAMAN ADMIN -->
     <div id="admin-page" class="page">
         <h2>Panel Race Director</h2>
+
+        <!-- KONTROL STOPWATCH ADMIN -->
+        <div class="admin-section" style="background:#222; border-color:#444;">
+            <h3 style="color:#28a745; margin-bottom:5px;">RACE STOPWATCH</h3>
+            <div id="admin-timer-display" style="font-size:28px; font-weight:900; margin:5px 0;">00:00.00</div>
+            <button class="timer-btn" style="background:#28a745;" onclick="startTimer()">START</button>
+            <button class="timer-btn" style="background:#ffc107; color:#000;" onclick="pauseTimer()">PAUSE</button>
+            <button class="timer-btn" style="background:#dc3545;" onclick="resetTimer()">RESET</button>
+        </div>
         
         <button class="flag-btn green" onclick="setGlobalFlag('GREEN FLAG', '', '#28a745', '#ffffff', false, 'standard')">GREEN FLAG</button>
         <button class="flag-btn yellow" onclick="setGlobalFlag('YELLOW FLAG', 'LIMIT 80 KM/H', '#ffc107', '#000000', true, 'standard')">YELLOW FLAG</button>
@@ -177,7 +217,7 @@
         <button class="flag-btn finish" onclick="setGlobalFlag('FINISH / CHEQUERED', '', '#000000', '#ffffff', false, 'standard')">FINISH</button>
         <button class="flag-btn clear" onclick="setGlobalFlag('TRACK CLEAR', '', '#333333', '#ffffff', false, 'standard')">TRACK CLEAR</button>
 
-        <div class="blue-section">
+        <div class="admin-section">
             <h3 style="color:#00aaff;">BLUE FLAG TARGET</h3>
             <p style="font-size:12px; color:#ccc; margin-bottom:10px;">Pilih driver yang harus memberi jalan:</p>
             <div id="driver-buttons-list">
@@ -194,6 +234,8 @@
 
     <!-- 5. HALAMAN BENDERA DRIVER -->
     <div id="driver-page" class="page">
+        <div id="timer-hud">00:00.00</div>
+
         <div id="flag-display">
             <div id="main-text">WAITING...</div>
             <div id="sub-text" class="sub-text-display"></div>
@@ -218,6 +260,9 @@
 
         let myDriverNumber = localStorage.getItem('registered_driver_num') || "";
         let blinkInterval = null;
+        let timerLocalInterval = null;
+        let currentDrivers = {};
+        let currentBlueFlags = {};
 
         window.addEventListener('DOMContentLoaded', function() {
             if (myDriverNumber) {
@@ -339,6 +384,81 @@
             });
         }
 
+        /* LOGIKA STOPWATCH FIREBASE */
+        function startTimer() {
+            database.ref('race/timer').once('value', function(snapshot) {
+                const data = snapshot.val() || {};
+                const elapsed = data.elapsedTime || 0;
+                database.ref('race/timer').set({
+                    isRunning: true,
+                    startTime: Date.now() - elapsed,
+                    elapsedTime: elapsed
+                });
+            });
+        }
+
+        function pauseTimer() {
+            database.ref('race/timer').once('value', function(snapshot) {
+                const data = snapshot.val() || {};
+                if (data.isRunning) {
+                    const currentElapsed = Date.now() - data.startTime;
+                    database.ref('race/timer').set({
+                        isRunning: false,
+                        startTime: 0,
+                        elapsedTime: currentElapsed
+                    });
+                }
+            });
+        }
+
+        function resetTimer() {
+            database.ref('race/timer').set({
+                isRunning: false,
+                startTime: 0,
+                elapsedTime: 0
+            });
+        }
+
+        function formatTime(ms) {
+            if (ms < 0) ms = 0;
+            const totalSec = Math.floor(ms / 1000);
+            const mins = Math.floor(totalSec / 60);
+            const secs = totalSec % 60;
+            const millis = Math.floor((ms % 1000) / 10);
+
+            const mStr = String(mins).padStart(2, '0');
+            const sStr = String(secs).padStart(2, '0');
+            const msStr = String(millis).padStart(2, '0');
+
+            return mStr + ":" + sStr + "." + msStr;
+        }
+
+        database.ref('race/timer').on('value', function(snapshot) {
+            const data = snapshot.val() || { isRunning: false, startTime: 0, elapsedTime: 0 };
+
+            if (timerLocalInterval) clearInterval(timerLocalInterval);
+
+            function updateTimerDisplay() {
+                let currentMs = data.elapsedTime || 0;
+                if (data.isRunning && data.startTime) {
+                    currentMs = Date.now() - data.startTime;
+                }
+                const formatted = formatTime(currentMs);
+                
+                const hud = document.getElementById('timer-hud');
+                const adminHud = document.getElementById('admin-timer-display');
+                
+                if (hud) hud.innerText = formatted;
+                if (adminHud) adminHud.innerText = formatted;
+            }
+
+            updateTimerDisplay();
+
+            if (data.isRunning) {
+                timerLocalInterval = setInterval(updateTimerDisplay, 30);
+            }
+        });
+
         function toggleBlueFlag(driverNum) {
             const ref = database.ref('race/blue_flags/' + driverNum);
             ref.once('value', function(snapshot) {
@@ -361,40 +481,45 @@
             }
         }
 
-        database.ref('race/drivers').on('value', function(snapshot) {
+        /* RENDER LIST DRIVER & BLUE FLAG TANPA NESTED LISTENER (BERSIH) */
+        function renderDriverList() {
             const listDiv = document.getElementById('driver-buttons-list');
-            const drivers = snapshot.val();
-            
-            if (!drivers) {
+            if (!listDiv) return;
+
+            if (!currentDrivers || Object.keys(currentDrivers).length === 0) {
                 if (myDriverNumber) {
                     localStorage.removeItem('registered_driver_num');
                     myDriverNumber = "";
                     showPage('home-menu');
                 }
-                if (listDiv) listDiv.innerHTML = '<i style="font-size:12px; color:#888;">Belum ada driver terhubung...</i>';
+                listDiv.innerHTML = '<i style="font-size:12px; color:#888;">Belum ada driver terhubung...</i>';
                 return;
             }
 
-            database.ref('race/blue_flags').on('value', function(blueSnap) {
-                const blueList = blueSnap.val() || {};
-                if (listDiv) {
-                    listDiv.innerHTML = '';
+            listDiv.innerHTML = '';
+            Object.keys(currentDrivers).forEach(function(num) {
+                const d = currentDrivers[num];
+                const isBlue = currentBlueFlags[num] ? true : false;
 
-                    Object.keys(drivers).forEach(function(num) {
-                        const d = drivers[num];
-                        const isBlue = blueList[num] ? true : false;
+                const btn = document.createElement('button');
+                btn.className = 'driver-blue-btn';
+                btn.style.backgroundColor = isBlue ? '#00d2ff' : '#0056b3';
+                btn.style.color = isBlue ? '#000' : '#fff';
+                btn.innerText = '#' + d.number + ' - ' + d.name + (isBlue ? ' (BLUE)' : '');
+                btn.onclick = function() { toggleBlueFlag(d.number); };
 
-                        const btn = document.createElement('button');
-                        btn.className = 'driver-blue-btn';
-                        btn.style.backgroundColor = isBlue ? '#00d2ff' : '#0056b3';
-                        btn.style.color = isBlue ? '#000' : '#fff';
-                        btn.innerText = '#' + d.number + ' - ' + d.name + (isBlue ? ' (BLUE)' : '');
-                        btn.onclick = function() { toggleBlueFlag(d.number); };
-
-                        listDiv.appendChild(btn);
-                    });
-                }
+                listDiv.appendChild(btn);
             });
+        }
+
+        database.ref('race/drivers').on('value', function(snapshot) {
+            currentDrivers = snapshot.val() || {};
+            renderDriverList();
+        });
+
+        database.ref('race/blue_flags').on('value', function(snapshot) {
+            currentBlueFlags = snapshot.val() || {};
+            renderDriverList();
         });
 
         database.ref('race').on('value', function(snapshot) {
@@ -428,47 +553,39 @@
 
             } else if (globalStatus.blink) {
                 let step = 0;
-                
-                // Deteksi otomatis jika teks mengandung FCY atau mode FCY
                 const isFCY = (globalStatus.mode === 'fcy') || (globalStatus.text && globalStatus.text.includes('FULL COURSE'));
 
                 function updateBlink() {
                     if (isFCY) {
-                        // SIKLUS KHUSUS FCY (4 TAHAP @ 2 DETIK)
                         if (step === 0) {
-                            // Tahap 1: Oranye/Kuning - FULL COURSE YELLOW
                             mainText.innerText = "FULL COURSE YELLOW";
                             subText.innerText = "";
                             display.style.backgroundColor = globalStatus.bg || "#ff9800";
-                            display.style.color = globalStatus.color || "#000000";
+                            display.style.color = "#000000"; // Teks Hitam
                         } else if (step === 1) {
-                            // Tahap 2: Hitam - 80 KM/H
                             mainText.innerText = "80 KM/H";
                             subText.innerText = "";
                             display.style.backgroundColor = "#000000";
                             display.style.color = "#ffffff";
                         } else if (step === 2) {
-                            // Tahap 3: Oranye/Kuning - DON'T OVERTAKE
                             mainText.innerText = "DON'T OVERTAKE";
                             subText.innerText = "";
                             display.style.backgroundColor = globalStatus.bg || "#ff9800";
-                            display.style.color = globalStatus.color || "#000000";
+                            display.style.color = "#000000"; // Teks Hitam
                         } else if (step === 3) {
-                            // Tahap 4: Hitam - 80 KM/H
                             mainText.innerText = "80 KM/H";
                             subText.innerText = "";
                             display.style.backgroundColor = "#000000";
                             display.style.color = "#ffffff";
                         }
-                        step = (step + 1) % 4; // Ulang terus 0 -> 1 -> 2 -> 3
+                        step = (step + 1) % 4;
 
                     } else {
-                        // SIKLUS STANDARD (Yellow Flag / Red Flag biasa)
                         if (step === 0) {
                             mainText.innerText = globalStatus.text;
-                            subText.innerText = "";
+                            subText.innerText = globalStatus.subText || "";
                             display.style.backgroundColor = globalStatus.bg;
-                            display.style.color = globalStatus.color;
+                            display.style.color = globalStatus.color || "#000000"; // Teks Hitam
                         } else {
                             mainText.innerText = globalStatus.subText || globalStatus.text;
                             subText.innerText = "";
@@ -480,7 +597,7 @@
                 }
 
                 updateBlink();
-                blinkInterval = setInterval(updateBlink, 2000); // Durasi 2 Detik
+                blinkInterval = setInterval(updateBlink, 1700); // 1.7 Detik
 
             } else {
                 mainText.innerText = globalStatus.text || "WAITING...";
@@ -491,5 +608,4 @@
         });
     </script>
 </body>
-            </html>
-            
+</html>
