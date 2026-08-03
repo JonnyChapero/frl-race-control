@@ -1,217 +1,9 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
-    <!-- PENCEGAH CACHE BROWSER -->
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-
-    <title>FR Legends Race Control</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
-        body { background-color: #121212; color: #fff; text-align: center; padding: 20px; }
-        
-        .page { display: none !important; }
-        #home-menu.active { display: block !important; margin-top: 20px; }
-        #admin-page.active { display: block !important; }
-        #driver-setup.active { display: block !important; margin-top: 20px; }
-        
-        #driver-page.active { 
-            display: flex !important; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            position: fixed; 
-            top: 0; left: 0; right: 0; bottom: 0;
-            width: 100vw; height: 100vh; 
-            z-index: 999999; 
-            background-color: #000;
-            overflow: hidden;
-        }
-
-        h1, h2, h3 { margin-bottom: 15px; }
-        
-        .nav-btn { 
-            display: block; 
-            width: 90%; 
-            max-width: 300px; 
-            margin: 15px auto; 
-            padding: 15px; 
-            font-size: 16px; 
-            font-weight: bold; 
-            border: none; 
-            border-radius: 8px; 
-            cursor: pointer; 
-            color: white; 
-        }
-        .btn-admin { background-color: #007bff; }
-        .btn-driver { background-color: #28a745; }
-        
-        /* FORM INPUT */
-        .input-box {
-            width: 90%;
-            max-width: 300px;
-            padding: 12px;
-            margin: 10px auto;
-            border-radius: 6px;
-            border: 1px solid #444;
-            background: #222;
-            color: #fff;
-            font-size: 16px;
-            text-align: center;
-            display: block;
-        }
-
-        /* BOX BENDERA DRIVER */
-        #flag-display { 
-            width: 100%; 
-            height: 100%; 
-            display: flex; 
-            flex-direction: column;
-            align-items: center; 
-            justify-content: center; 
-            font-size: clamp(14px, 6vw, 24px); 
-            font-weight: 900; 
-            text-transform: uppercase; 
-            text-align: center; 
-            padding: 5px; 
-            word-wrap: break-word; 
-            line-height: 1.2; 
-            color: white; 
-            background-color: #333; 
-        }
-        .sub-text-display {
-            font-size: clamp(12px, 4vw, 18px);
-            font-weight: bold;
-            margin-top: 10px;
-        }
-
-        /* MODAL PASSWORD ADMIN */
-        #password-modal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85);
-            z-index: 999;
-            padding-top: 50px;
-        }
-        .modal-content {
-            background: #222;
-            padding: 20px;
-            border-radius: 10px;
-            width: 85%;
-            max-width: 320px;
-            margin: auto;
-            border: 1px solid #444;
-        }
-
-        /* TOMBOL BENDERA ADMIN */
-        .flag-btn { width: 90%; max-width: 350px; padding: 14px; margin: 8px auto; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; display: block; }
-        .green { background-color: #28a745; color: white; }
-        .yellow { background-color: #ffc107; color: black; }
-        .fcy { background-color: #ff9800; color: black; }
-        .red { background-color: #dc3545; color: white; }
-        .finish { background-color: #000; color: white; border: 2px solid #fff; }
-        .clear { background-color: #333; color: white; border: 1px solid #555; }
-        
-        .blue-section {
-            background: #1a233a;
-            border: 1px solid #2a3b66;
-            padding: 15px;
-            border-radius: 10px;
-            margin: 20px auto;
-            width: 90%;
-            max-width: 350px;
-        }
-        .driver-blue-btn {
-            background-color: #0056b3;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            margin: 5px;
-            border-radius: 5px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        .back-btn { background-color: #6c757d; color: white; margin-top: 15px; padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer; }
-        .reset-btn { background-color: #dc3545; color: white; padding: 8px 14px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 10px; }
-    </style>
-</head>
-<body>
-
-    <!-- 1. MENU UTAMA -->
-    <div id="home-menu" class="page active">
-        <h1>RACE CONTROL SYSTEM</h1>
-        <button class="nav-btn btn-admin" onclick="openPasswordModal()">Panel Admin</button>
-        <button class="nav-btn btn-driver" onclick="handleDriverClick()">Tampilan Driver</button>
-    </div>
-
-    <!-- 2. MODAL PASSWORD ADMIN -->
-    <div id="password-modal">
-        <div class="modal-content">
-            <h3>Akses Race Director</h3>
-            <input type="password" id="admin-pass-input" class="input-box" placeholder="Masukkan Password">
-            <button class="nav-btn btn-admin" style="width:100%; padding:10px; margin:0;" onclick="verifyPassword()">Masuk</button>
-            <button class="back-btn" style="margin-top:10px;" onclick="closePasswordModal()">Batal</button>
-        </div>
-    </div>
-
-    <!-- 3. DRIVER SETUP (ISI NAMA & NOMOR MOBIL) -->
-    <div id="driver-setup" class="page">
-        <h2>Registrasi Driver</h2>
-        <p style="font-size:12px; color:#aaa; margin-bottom:10px;">Sekali terdaftar, nomor tidak dapat diubah sendiri.</p>
-        <input type="text" id="driver-name" class="input-box" placeholder="Nama Driver">
-        <input type="number" id="driver-number" class="input-box" placeholder="Nomor Mobil (contoh: 05)">
-        <button class="nav-btn btn-driver" onclick="registerDriver()">MASUK LINTASAN</button>
-        <button class="back-btn" onclick="showPage('home-menu')">Kembali</button>
-    </div>
-
-    <!-- 4. HALAMAN ADMIN -->
-    <div id="admin-page" class="page">
-        <h2>Panel Race Director</h2>
-        
-        <!-- BENDERA GLOBAL -->
-        <button class="flag-btn green" onclick="setGlobalFlag('GREEN FLAG', '', '#28a745', '#ffffff', false)">GREEN FLAG</button>
-        <button class="flag-btn yellow" onclick="setGlobalFlag('YELLOW FLAG', 'LIMIT 80 KM/H', '#ffc107', '#000000', true)">YELLOW FLAG</button>
-        <button class="flag-btn fcy" onclick="setGlobalFlag('FULL COURSE YELLOW', 'LIMIT 80 KM/H', '#ff9800', '#000000', true)">FCY</button>
-        <button class="flag-btn red" onclick="setGlobalFlag('RED FLAG', 'BACK TO PIT', '#dc3545', '#ffffff', true)">RED FLAG</button>
-        <button class="flag-btn finish" onclick="setGlobalFlag('FINISH / CHEQUERED', '', '#000000', '#ffffff', false)">FINISH</button>
-        <button class="flag-btn clear" onclick="setGlobalFlag('TRACK CLEAR', '', '#333333', '#ffffff', false)">TRACK CLEAR</button>
-
-        <!-- PANEL BLUE FLAG INDIVIDUAL -->
-        <div class="blue-section">
-            <h3 style="color:#00aaff;">BLUE FLAG TARGET</h3>
-            <p style="font-size:12px; color:#ccc; margin-bottom:10px;">Pilih driver yang harus memberi jalan:</p>
-            <div id="driver-buttons-list">
-                <i style="font-size:12px; color:#888;">Belum ada driver terhubung...</i>
-            </div>
-            <br>
-            <button class="back-btn" style="background:#ff9800; color:#000;" onclick="clearAllBlueFlags()">Reset Status Blue Flag</button>
-            <br>
-            <button class="reset-btn" onclick="removeAllDrivers()">Hapus/Reset Daftar Driver</button>
-        </div>
-
-        <button class="back-btn" onclick="showPage('home-menu')">Kembali ke Menu</button>
-    </div>
-
-    <!-- 5. HALAMAN BENDERA DRIVER -->
-    <div id="driver-page" class="page">
-        <div id="flag-display">
-            <div id="main-text">WAITING...</div>
-            <div id="sub-text" class="sub-text-display"></div>
-        </div>
-    </div>
-
     <!-- Firebase SDK & Script -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <script>
-        const ADMIN_PASSWORD = "wildunnigga123";
+        const ADMIN_PASSWORD = "flgstest";
 
         const firebaseConfig = {
             databaseURL: "https://frl-race-direction-default-rtdb.asia-southeast1.firebasedatabase.app"
@@ -224,6 +16,14 @@
 
         let myDriverNumber = localStorage.getItem('registered_driver_num') || "";
         let blinkInterval = null;
+
+        // AUTO-CHECK SAAT WEB DIBUKA/REFRESH
+        window.addEventListener('DOMContentLoaded', () => {
+            if (myDriverNumber) {
+                // Jika HP ini sudah pernah mendaftar, langsung kunci & tampilkan layar bendera
+                showPage('driver-page', false);
+            }
+        });
 
         function showPage(pageId, addHistory = true) {
             const pages = document.querySelectorAll('.page');
@@ -238,19 +38,25 @@
 
         window.addEventListener('popstate', (event) => {
             if (event.state && event.state.page) {
-                showPage(event.state.page, false);
+                // Kalau HP sudah terdaftar, jangan biarkan kembali ke menu/form via tombol back browser
+                if (myDriverNumber && event.state.page !== 'driver-page') {
+                    showPage('driver-page', false);
+                } else {
+                    showPage(event.state.page, false);
+                }
             } else {
-                showPage('home-menu', false);
+                if (myDriverNumber) {
+                    showPage('driver-page', false);
+                } else {
+                    showPage('home-menu', false);
+                }
             }
         });
 
-        // CEK OOTOMATIS APAPAH DRIVER SUDAH DAFTAR
         function handleDriverClick() {
             if (myDriverNumber) {
-                // Jika sudah ada data terdaftar di HP, langsung lempar ke layar bendera
                 showPage('driver-page');
             } else {
-                // Jika belum, ke form registrasi
                 showPage('driver-setup');
             }
         }
@@ -274,33 +80,48 @@
             }
         }
 
-        // REGISTRASI DRIVER BARU
+        // REGISTRASI DRIVER BARU (DENGAN CEK CEGAH DUPLIKASI NAMA & NOMOR)
         function registerDriver() {
-            const name = document.getElementById('driver-name').value.trim();
-            const num = document.getElementById('driver-number').value.trim();
+            const nameInput = document.getElementById('driver-name').value.trim();
+            const numInput = document.getElementById('driver-number').value.trim();
 
-            if (!name || !num) {
+            if (!nameInput || !numInput) {
                 alert("Mohon isi Nama dan Nomor Mobil!");
                 return;
             }
 
-            // Cek apakah nomor sudah terpakai oleh driver lain di Firebase
-            database.ref('race/drivers/' + num).once('value', (snapshot) => {
-                if (snapshot.exists()) {
-                    alert("Nomor Mobil #" + num + " sudah digunakan driver lain! Silakan pilih nomor lain.");
-                } else {
-                    // Simpan di memori lokal HP
-                    localStorage.setItem('registered_driver_num', num);
-                    myDriverNumber = num;
+            // Cek ke Firebase apakah Nama atau Nomor sudah dipakai
+            database.ref('race/drivers').once('value', (snapshot) => {
+                const drivers = snapshot.val() || {};
+                
+                let isNumTaken = false;
+                let isNameTaken = false;
 
-                    // Simpan di Firebase
-                    database.ref('race/drivers/' + num).set({
-                        name: name,
-                        number: num
-                    });
+                Object.keys(drivers).forEach(key => {
+                    if (drivers[key].number === numInput) isNumTaken = true;
+                    if (drivers[key].name.toLowerCase() === nameInput.toLowerCase()) isNameTaken = true;
+                });
 
-                    showPage('driver-page');
+                if (isNumTaken) {
+                    alert("Nomor Mobil #" + numInput + " sudah digunakan! Pilih nomor lain.");
+                    return;
                 }
+
+                if (isNameTaken) {
+                    alert("Nama '" + nameInput + "' sudah terdaftar! Jika kamu sudah mendaftar sebelumnya, tidak perlu mendaftar ulang.");
+                    return;
+                }
+
+                // Jika lolos verifikasi:
+                localStorage.setItem('registered_driver_num', numInput);
+                myDriverNumber = numInput;
+
+                database.ref('race/drivers/' + numInput).set({
+                    name: nameInput,
+                    number: numInput
+                });
+
+                showPage('driver-page');
             });
         }
 
@@ -346,35 +167,36 @@
             const listDiv = document.getElementById('driver-buttons-list');
             const drivers = snapshot.val();
             
-            // Jika Admin baru saja menghapus daftar driver dari Firebase, 
-            // hapus juga registrasi lokal di HP driver jika daftar tersebut kosong
-            if (!drivers && myDriverNumber) {
-                localStorage.removeItem('registered_driver_num');
-                myDriverNumber = "";
-            }
-
+            // Jika admin menghapus daftar driver di Firebase, reset juga memori lokal HP driver
             if (!drivers) {
-                listDiv.innerHTML = '<i style="font-size:12px; color:#888;">Belum ada driver terhubung...</i>';
+                if (myDriverNumber) {
+                    localStorage.removeItem('registered_driver_num');
+                    myDriverNumber = "";
+                    showPage('home-menu');
+                }
+                if (listDiv) listDiv.innerHTML = '<i style="font-size:12px; color:#888;">Belum ada driver terhubung...</i>';
                 return;
             }
 
             database.ref('race/blue_flags').on('value', (blueSnap) => {
                 const blueList = blueSnap.val() || {};
-                listDiv.innerHTML = '';
+                if (listDiv) {
+                    listDiv.innerHTML = '';
 
-                Object.keys(drivers).forEach(num => {
-                    const d = drivers[num];
-                    const isBlue = blueList[num] ? true : false;
+                    Object.keys(drivers).forEach(num => {
+                        const d = drivers[num];
+                        const isBlue = blueList[num] ? true : false;
 
-                    const btn = document.createElement('button');
-                    btn.className = 'driver-blue-btn';
-                    btn.style.backgroundColor = isBlue ? '#00d2ff' : '#0056b3';
-                    btn.style.color = isBlue ? '#000' : '#fff';
-                    btn.innerText = `#${d.number} - ${d.name} ${isBlue ? ' (BLUE)' : ''}`;
-                    btn.onclick = () => toggleBlueFlag(d.number);
+                        const btn = document.createElement('button');
+                        btn.className = 'driver-blue-btn';
+                        btn.style.backgroundColor = isBlue ? '#00d2ff' : '#0056b3';
+                        btn.style.color = isBlue ? '#000' : '#fff';
+                        btn.innerText = `#${d.number} - ${d.name} ${isBlue ? ' (BLUE)' : ''}`;
+                        btn.onclick = () => toggleBlueFlag(d.number);
 
-                    listDiv.appendChild(btn);
-                });
+                        listDiv.appendChild(btn);
+                    });
+                }
             });
         });
 
@@ -389,6 +211,8 @@
             const display = document.getElementById('flag-display');
             const mainText = document.getElementById('main-text');
             const subText = document.getElementById('sub-text');
+
+            if (!display || !mainText || !subText) return;
 
             if (blinkInterval) {
                 clearInterval(blinkInterval);
@@ -431,6 +255,3 @@
             }
         });
     </script>
-</body>
-    </html>
-    
