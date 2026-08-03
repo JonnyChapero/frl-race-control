@@ -174,7 +174,7 @@
     <div id="penalty-modal">
         <div class="modal-content">
             <h3 id="pen-target-title" style="color:#ff4444;">PENALTY TARGET</h3>
-            <p style="font-size:12px; color:#aaa; margin-bottom:15px;">Pilih Jenis Penalti yang Diberikan:</p>
+            <p style="font-size:12px; color:#aaa; margin-bottom:15px;">Pilih Jenis Penalti (Muncul 5 Detik):</p>
             <button class="flag-btn" style="background:#ff9800; color:#fff;" onclick="applyPenalty('WARNING', '+5 SEC PENALTY')">+5 SEC PENALTY</button>
             <button class="flag-btn" style="background:#dc3545; color:#fff;" onclick="applyPenalty('PENALTY', 'DRIVE THROUGH')">DRIVE THROUGH</button>
             <button class="flag-btn" style="background:#28a745; color:#fff;" onclick="applyPenalty('CLEAR', '')">CLEAR PENALTY</button>
@@ -206,7 +206,7 @@
         <!-- FITUR PENALTY TARGET AUTOMATIC -->
         <div class="admin-section" style="border-color: #ff3333;">
             <h3 style="color:#ff4444;">PENALTY CONTROL</h3>
-            <p style="font-size:12px; color:#ccc; margin-bottom:10px;">Klik driver untuk beri/hapus Penalti + Suara:</p>
+            <p style="font-size:12px; color:#ccc; margin-bottom:10px;">Klik driver untuk beri Penalti (Auto-Clear 5 Detik):</p>
             <div id="penalty-buttons-list">
                 <i style="font-size:12px; color:#888;">Belum ada driver...</i>
             </div>
@@ -259,29 +259,52 @@
         let currentBlueFlags = {};
         let currentPenalties = {};
         let selectedPenDriver = "";
+        let penaltyTimers = {}; // Menyimpan timer auto-clear penalti
 
-        // SUARA BEEP PENALTY
+        // GLOBAL AUDIO CONTEXT
+        let globalAudioCtx = null;
+
+        function getAudioContext() {
+            if (!globalAudioCtx) {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                if (AudioContextClass) {
+                    globalAudioCtx = new AudioContextClass();
+                }
+            }
+            if (globalAudioCtx && globalAudioCtx.state === 'suspended') {
+                globalAudioCtx.resume();
+            }
+            return globalAudioCtx;
+        }
+
+        // FUNGSI SUARA BEEP ACC
         function playWarningBeep() {
             try {
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const audioCtx = getAudioContext();
+                if (!audioCtx) return;
+
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
 
                 osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(900, audioCtx.currentTime); // Frekuensi BEEP
+                osc.frequency.setValueAtTime(900, audioCtx.currentTime); // Frekuensi 900 Hz khas ACC
                 
                 gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.35);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
 
                 osc.connect(gain);
                 gain.connect(audioCtx.destination);
 
-                osc.start();
+                osc.start(audioCtx.currentTime);
                 osc.stop(audioCtx.currentTime + 0.35);
             } catch(e) {
                 console.log("Audio Error:", e);
             }
         }
+
+        document.addEventListener('click', function() {
+            getAudioContext();
+        }, { once: true });
 
         window.addEventListener('DOMContentLoaded', function() {
             if (myDriverNumber) {
@@ -322,6 +345,7 @@
         });
 
         function handleDriverClick() {
+            getAudioContext();
             if (myDriverNumber) {
                 showPage('driver-page');
             } else {
@@ -349,6 +373,7 @@
         }
 
         function registerDriver() {
+            getAudioContext();
             const nameInput = document.getElementById('driver-name').value.trim();
             const numInput = document.getElementById('driver-number').value.trim();
 
@@ -414,21 +439,40 @@
             document.getElementById('penalty-modal').style.display = 'none';
         }
 
+        // FUNGSI UTAMA PENALTY DENGAN TIMER AUTO-CLEAR 5 DETIK
         function applyPenalty(title, detail) {
             if (!selectedPenDriver) return;
             
+            const targetNum = selectedPenDriver;
+
+            // Batalkan timer aktif jika driver yang sama diberi penalti baru lagi
+            if (penaltyTimers[targetNum]) {
+                clearTimeout(penaltyTimers[targetNum]);
+                delete penaltyTimers[targetNum];
+            }
+
             if (title === 'CLEAR') {
-                database.ref('race/penalties/' + selectedPenDriver).remove();
+                database.ref('race/penalties/' + targetNum).remove();
             } else {
-                database.ref('race/penalties/' + selectedPenDriver).set({
+                database.ref('race/penalties/' + targetNum).set({
                     title: title,
                     detail: detail
                 });
+
+                // ATUR TIMER 5 DETIK HILANG OTOMATIS
+                penaltyTimers[targetNum] = setTimeout(function() {
+                    database.ref('race/penalties/' + targetNum).remove();
+                    delete penaltyTimers[targetNum];
+                }, 5000); // 5000ms = 5 Detik
             }
             closePenaltyModal();
         }
 
         function clearAllPenalties() {
+            Object.keys(penaltyTimers).forEach(function(key) {
+                clearTimeout(penaltyTimers[key]);
+            });
+            penaltyTimers = {};
             database.ref('race/penalties').remove();
         }
 
@@ -494,7 +538,7 @@
                 pBtn.className = 'driver-pen-btn';
                 pBtn.style.backgroundColor = isPen ? '#ff1744' : '#616161';
                 pBtn.style.color = '#fff';
-                pBtn.innerText = '#' + d.number + ' - ' + d.name + (isPen ? ' (PENALTY!)' : '');
+                pBtn.innerText = '#' + d.number + ' - ' + d.name + (isPen ? ' (ACTIVE)' : '');
                 pBtn.onclick = function() { openPenaltyModal(d.number); };
                 penDiv.appendChild(pBtn);
             });
@@ -534,7 +578,7 @@
                 blinkInterval = null;
             }
 
-            // PRIORITAS 1: PENALTY BISA BUNYI SUARA
+            // PRIORITAS 1: PENALTY (BERKEDIP + BEEP SELAMA ADA DI DATABASE / 5 DETIK)
             if (myDriverNumber && penalties[myDriverNumber]) {
                 const pen = penalties[myDriverNumber];
                 let isRed = true;
