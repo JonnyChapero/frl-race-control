@@ -182,10 +182,11 @@
         </div>
     </div>
 
-    <!-- 3. DRIVER SETUP -->
+    <!-- 3. DRIVER SETUP (DENGAN KODE ROOM & LOBBY LOCK CHECK) -->
     <div id="driver-setup" class="page">
         <h2>Registrasi Driver</h2>
-        <p style="font-size:12px; color:#aaa; margin-bottom:10px;">Sekali terdaftar, nomor tidak dapat diubah sendiri.</p>
+        <p style="font-size:12px; color:#aaa; margin-bottom:10px;" id="setup-info-text">Masukkan data diri dan PIN Sesi dari Admin.</p>
+        <input type="text" id="room-pin-input" class="input-box" placeholder="PIN Sesi (4 Digit)">
         <input type="text" id="driver-name" class="input-box" placeholder="Nama Driver">
         <input type="number" id="driver-number" class="input-box" placeholder="Nomor Mobil (contoh: 05)">
         <button class="nav-btn btn-driver" onclick="registerDriver()">MASUK LINTASAN</button>
@@ -196,6 +197,22 @@
     <div id="admin-page" class="page">
         <h2>Panel Race Director</h2>
         
+        <!-- PENGATURAN KEAMANAN SESI & LOBBY -->
+        <div class="admin-section" style="border-color: #00ffcc;">
+            <h3 style="color:#00ffcc;">KEAMANAN SESI</h3>
+            <div style="margin-bottom:10px;">
+                <label style="font-size:12px; color:#aaa;">PIN Sesi Saat Ini:</label>
+                <div id="display-room-pin" style="font-size:20px; font-weight:bold; color:#ffeb3b; margin:5px 0;">----</div>
+                <button class="back-btn" style="background:#007bff; padding:6px 12px; font-size:12px;" onclick="generateNewPin()">Buat PIN Baru</button>
+            </div>
+            <hr style="border:0; border-top:1px solid #333; margin:10px 0;">
+            <div>
+                <label style="font-size:12px; color:#aaa;">Status Lobby Pendaftaran:</label>
+                <div id="display-lobby-status" style="font-size:14px; font-weight:bold; margin:5px 0;">MENGAMBIL DATA...</div>
+                <button id="toggle-lobby-btn" class="back-btn" style="padding:8px 14px; font-weight:bold;" onclick="toggleLobbyLock()">UBAH STATUS LOBBY</button>
+            </div>
+        </div>
+
         <button class="flag-btn green" onclick="setGlobalFlag('GREEN FLAG', '', '#28a745', '#ffffff', false, 'standard')">GREEN FLAG</button>
         <button class="flag-btn yellow-admin" onclick="setGlobalFlag('YELLOW FLAG', 'LIMIT 80 KM/H', '#ffc107', '#000000', true, 'yellow-blink')">YELLOW FLAG</button>
         <button class="flag-btn fcy-admin" onclick="setGlobalFlag('FULL COURSE YELLOW', '80 KM/H', '#ff9800', '#000000', true, 'fcy')">FCY</button>
@@ -242,7 +259,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <script>
-        const ADMIN_PASSWORD = "wongireng19";
+        const ADMIN_PASSWORD = "wildunnigga123";
 
         const firebaseConfig = {
             databaseURL: "https://frl-race-direction-default-rtdb.asia-southeast1.firebasedatabase.app"
@@ -259,7 +276,9 @@
         let currentBlueFlags = {};
         let currentPenalties = {};
         let selectedPenDriver = "";
-        let penaltyTimers = {}; // Menyimpan timer auto-clear penalti
+        let penaltyTimers = {}; 
+        let globalRoomPin = "1234";
+        let isLobbyOpen = true;
 
         // GLOBAL AUDIO CONTEXT
         let globalAudioCtx = null;
@@ -277,7 +296,6 @@
             return globalAudioCtx;
         }
 
-        // FUNGSI SUARA BEEP ACC
         function playWarningBeep() {
             try {
                 const audioCtx = getAudioContext();
@@ -287,7 +305,7 @@
                 const gain = audioCtx.createGain();
 
                 osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(900, audioCtx.currentTime); // Frekuensi 900 Hz khas ACC
+                osc.frequency.setValueAtTime(900, audioCtx.currentTime);
                 
                 gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
@@ -308,7 +326,16 @@
 
         window.addEventListener('DOMContentLoaded', function() {
             if (myDriverNumber) {
-                showPage('driver-page', false);
+                // Cek apakah driver masih terdaftar di sesi aktif
+                database.ref('race/drivers/' + myDriverNumber).once('value', function(snapshot) {
+                    if (snapshot.exists()) {
+                        showPage('driver-page', false);
+                    } else {
+                        localStorage.removeItem('registered_driver_num');
+                        myDriverNumber = "";
+                        showPage('home-menu', false);
+                    }
+                });
             }
         });
 
@@ -349,6 +376,10 @@
             if (myDriverNumber) {
                 showPage('driver-page');
             } else {
+                if (!isLobbyOpen) {
+                    alert("Lobby pendaftaran sedang DIKUNCI oleh Admin!");
+                    return;
+                }
                 showPage('driver-setup');
             }
         }
@@ -372,10 +403,38 @@
             }
         }
 
+        // FUNGSI KELOLA PIN SESI ROOM
+        function generateNewPin() {
+            const newPin = Math.floor(1000 + Math.random() * 9000).toString();
+            database.ref('race/settings/roomPin').set(newPin);
+            // Setiap PIN baru dibuat, otomatis reset semua driver lama agar steril
+            database.ref('race/drivers').remove();
+            database.ref('race/blue_flags').remove();
+            database.ref('race/penalties').remove();
+            alert("PIN Sesi diperbarui menjadi: " + newPin + "\nSemua driver lama telah di-reset bersih.");
+        }
+
+        // FUNGSI GEMBOK LOBBY
+        function toggleLobbyLock() {
+            const nextStatus = !isLobbyOpen;
+            database.ref('race/settings/isLobbyOpen').set(nextStatus);
+        }
+
         function registerDriver() {
             getAudioContext();
+            const pinInput = document.getElementById('room-pin-input').value.trim();
             const nameInput = document.getElementById('driver-name').value.trim();
             const numInput = document.getElementById('driver-number').value.trim();
+
+            if (!isLobbyOpen) {
+                alert("Maaf, pendaftaran/lobby sedang ditutup oleh Admin.");
+                return;
+            }
+
+            if (pinInput !== globalRoomPin) {
+                alert("PIN Sesi Salah! Minta PIN terbaru ke Admin.");
+                return;
+            }
 
             if (!nameInput || !numInput) {
                 alert("Mohon isi Nama dan Nomor Mobil!");
@@ -439,13 +498,11 @@
             document.getElementById('penalty-modal').style.display = 'none';
         }
 
-        // FUNGSI UTAMA PENALTY DENGAN TIMER AUTO-CLEAR 5 DETIK
         function applyPenalty(title, detail) {
             if (!selectedPenDriver) return;
             
             const targetNum = selectedPenDriver;
 
-            // Batalkan timer aktif jika driver yang sama diberi penalti baru lagi
             if (penaltyTimers[targetNum]) {
                 clearTimeout(penaltyTimers[targetNum]);
                 delete penaltyTimers[targetNum];
@@ -459,11 +516,10 @@
                     detail: detail
                 });
 
-                // ATUR TIMER 5 DETIK HILANG OTOMATIS
                 penaltyTimers[targetNum] = setTimeout(function() {
                     database.ref('race/penalties/' + targetNum).remove();
                     delete penaltyTimers[targetNum];
-                }, 5000); // 5000ms = 5 Detik
+                }, 5000);
             }
             closePenaltyModal();
         }
@@ -524,7 +580,6 @@
                 const isBlue = currentBlueFlags[num] ? true : false;
                 const isPen = currentPenalties[num] ? true : false;
 
-                // Blue Flag Button
                 const btn = document.createElement('button');
                 btn.className = 'driver-blue-btn';
                 btn.style.backgroundColor = isBlue ? '#00d2ff' : '#0056b3';
@@ -533,7 +588,6 @@
                 btn.onclick = function() { toggleBlueFlag(d.number); };
                 listDiv.appendChild(btn);
 
-                // Penalty Button
                 const pBtn = document.createElement('button');
                 pBtn.className = 'driver-pen-btn';
                 pBtn.style.backgroundColor = isPen ? '#ff1744' : '#616161';
@@ -543,6 +597,28 @@
                 penDiv.appendChild(pBtn);
             });
         }
+
+        // LISTENER REALTIME FIREBASE SETTINGS
+        database.ref('race/settings').on('value', function(snapshot) {
+            const settings = snapshot.val() || {};
+            globalRoomPin = settings.roomPin || "1234";
+            isLobbyOpen = settings.isLobbyOpen !== undefined ? settings.isLobbyOpen : true;
+
+            // Update Tampilan di Panel Admin
+            const pinDisplay = document.getElementById('display-room-pin');
+            const lobbyDisplay = document.getElementById('display-lobby-status');
+            const lobbyBtn = document.getElementById('toggle-lobby-btn');
+
+            if (pinDisplay) pinDisplay.innerText = globalRoomPin;
+            if (lobbyDisplay) {
+                lobbyDisplay.innerText = isLobbyOpen ? "TERBUKA (Bisa Daftar)" : "TERKUNCI (Ditutup)";
+                lobbyDisplay.style.color = isLobbyOpen ? "#28a745" : "#dc3545";
+            }
+            if (lobbyBtn) {
+                lobbyBtn.innerText = isLobbyOpen ? "KUNCI LOBBY SEKARANG" : "BUKA KEMBALI LOBBY";
+                lobbyBtn.style.backgroundColor = isLobbyOpen ? "#dc3545" : "#28a745";
+            }
+        });
 
         database.ref('race/drivers').on('value', function(snapshot) {
             currentDrivers = snapshot.val() || {};
@@ -563,6 +639,15 @@
             const data = snapshot.val();
             if (!data) return;
 
+            // Cek paksa jika driver dihapus admin dari database saat sesi di-reset
+            if (myDriverNumber && data.drivers && !data.drivers[myDriverNumber]) {
+                localStorage.removeItem('registered_driver_num');
+                myDriverNumber = "";
+                alert("Sesi telah direset/berakhir oleh Admin.");
+                showPage('home-menu');
+                return;
+            }
+
             const globalStatus = data.status || {};
             const blueFlags = data.blue_flags || {};
             const penalties = data.penalties || {};
@@ -578,7 +663,6 @@
                 blinkInterval = null;
             }
 
-            // PRIORITAS 1: PENALTY (BERKEDIP + BEEP SELAMA ADA DI DATABASE / 5 DETIK)
             if (myDriverNumber && penalties[myDriverNumber]) {
                 const pen = penalties[myDriverNumber];
                 let isRed = true;
@@ -595,7 +679,6 @@
                     isRed = !isRed;
                 }, 600);
 
-            // PRIORITAS 2: BLUE FLAG
             } else if (myDriverNumber && blueFlags[myDriverNumber]) {
                 let isBlue = true;
                 mainText.innerText = "BLUE FLAG";
@@ -607,7 +690,6 @@
                     isBlue = !isBlue;
                 }, 500);
 
-            // PRIORITAS 3: BENDERA GLOBAL
             } else if (globalStatus.blink) {
                 let step = 0;
                 const mode = globalStatus.mode || 'standard';
