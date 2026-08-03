@@ -109,8 +109,8 @@
 
         .flag-btn { width: 90%; max-width: 350px; padding: 14px; margin: 8px auto; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; display: block; }
         .green { background-color: #28a745; color: white; }
-        .yellow-admin { background-color: #ffffff; color: #000000; } /* Tombol Admin Putih */
-        .fcy-admin { background-color: #ffffff; color: #000000; }     /* Tombol Admin Putih */
+        .yellow-admin { background-color: #ffc107; color: #ffffff; } /* Kuning, Teks Putih */
+        .fcy-admin { background-color: #ff9800; color: #ffffff; }     /* Oranye, Teks Putih */
         .red { background-color: #dc3545; color: white; }
         .finish { background-color: #000; color: white; border: 2px solid #fff; }
         .clear { background-color: #333; color: white; border: 1px solid #555; }
@@ -466,12 +466,12 @@
                         step = (step + 1) % 4;
 
                     } else if (mode === 'yellow-blink') {
-                        // Yellow Flag: Kedip warna Kuning vs Hitam (Teks 80 KM/H hanya muncul di layar hitam)
+                        // Yellow Flag (1.5 detik): Kedip Kuning vs Hitam
                         if (step === 0) {
-                            mainText.innerText = globalStatus.text; // "YELLOW FLAG"
-                            subText.innerText = "";                 // Bersih tanpa subtext di background kuning
-                            display.style.backgroundColor = globalStatus.bg; // #ffc107
-                            display.style.color = globalStatus.color || "#000000";
+                            mainText.innerText = "YELLOW FLAG";
+                            subText.innerText = ""; // Bersih tanpa "80 KM/H" di layar kuning
+                            display.style.backgroundColor = globalStatus.bg || "#ffc107";
+                            display.style.color = "#000000";
                         } else {
                             mainText.innerText = "80 KM/H";
                             subText.innerText = "";
@@ -481,16 +481,16 @@
                         step = (step + 1) % 2;
 
                     } else if (mode === 'red-blink') {
-                        // Red Flag: Kedip warna Merah vs Hitam
+                        // Red Flag (1.5 detik): Kedip Merah vs Hitam
                         if (step === 0) {
-                            mainText.innerText = globalStatus.text; // "RED FLAG"
-                            subText.innerText = globalStatus.subText || "";
-                            display.style.backgroundColor = globalStatus.bg; // #dc3545
-                            display.style.color = globalStatus.color || "#ffffff";
+                            mainText.innerText = "RED FLAG";
+                            subText.innerText = ""; // Bersih di layar merah
+                            display.style.backgroundColor = globalStatus.bg || "#dc3545";
+                            display.style.color = "#ffffff";
                         } else {
-                            mainText.innerText = globalStatus.subText || globalStatus.text;
-                            subText.innerText = "";
-                            display.style.backgroundColor = "#000000";
+                            mainText.innerText = "BACK TO PIT";
+                            subText.innerText = ""; // "BACK TO PIT" di layar hitam
+                            display.style.backgroundColor = "#000000"; // Hitam
                             display.style.color = "#ffffff";
                         }
                         step = (step + 1) % 2;
@@ -515,7 +515,7 @@
                 updateBlink();
 
                 // Tentukan kecepatan interval berdasarkan mode
-                let intervalTime = 1500; // Default 1.5 detik untuk Yellow & Red
+                let intervalTime = 1500; // 1.5 detik untuk Yellow & Red
                 if (mode === 'fcy') {
                     intervalTime = 1700; // 1.7 detik khusus FCY
                 }
