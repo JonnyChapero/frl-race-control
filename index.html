@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
-    <!-- PENCEGAH CACHE BROWSER -->
+    <!-- PENCEGAH CACHE BROWSER STRICT -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -335,7 +335,7 @@
                 bg: bgColor,
                 color: textColor,
                 blink: isBlinking || false,
-                mode: modeType || 'standard'
+                mode: modeType || (statusText.includes('FULL COURSE') ? 'fcy' : 'standard')
             });
         }
 
@@ -428,16 +428,19 @@
 
             } else if (globalStatus.blink) {
                 let step = 0;
+                
+                // Deteksi otomatis jika teks mengandung FCY atau mode FCY
+                const isFCY = (globalStatus.mode === 'fcy') || (globalStatus.text && globalStatus.text.includes('FULL COURSE'));
 
                 function updateBlink() {
-                    if (globalStatus.mode === 'fcy') {
+                    if (isFCY) {
                         // SIKLUS KHUSUS FCY (4 TAHAP @ 2 DETIK)
                         if (step === 0) {
-                            // Tahap 1: Kuning - Full Course Yellow
+                            // Tahap 1: Oranye/Kuning - FULL COURSE YELLOW
                             mainText.innerText = "FULL COURSE YELLOW";
                             subText.innerText = "";
-                            display.style.backgroundColor = globalStatus.bg;
-                            display.style.color = globalStatus.color;
+                            display.style.backgroundColor = globalStatus.bg || "#ff9800";
+                            display.style.color = globalStatus.color || "#000000";
                         } else if (step === 1) {
                             // Tahap 2: Hitam - 80 KM/H
                             mainText.innerText = "80 KM/H";
@@ -445,11 +448,11 @@
                             display.style.backgroundColor = "#000000";
                             display.style.color = "#ffffff";
                         } else if (step === 2) {
-                            // Tahap 3: Kuning - Don't Overtake
+                            // Tahap 3: Oranye/Kuning - DON'T OVERTAKE
                             mainText.innerText = "DON'T OVERTAKE";
                             subText.innerText = "";
-                            display.style.backgroundColor = globalStatus.bg;
-                            display.style.color = globalStatus.color;
+                            display.style.backgroundColor = globalStatus.bg || "#ff9800";
+                            display.style.color = globalStatus.color || "#000000";
                         } else if (step === 3) {
                             // Tahap 4: Hitam - 80 KM/H
                             mainText.innerText = "80 KM/H";
@@ -457,10 +460,10 @@
                             display.style.backgroundColor = "#000000";
                             display.style.color = "#ffffff";
                         }
-                        step = (step + 1) % 4; // Berputar 0 -> 1 -> 2 -> 3 -> 0
+                        step = (step + 1) % 4; // Ulang terus 0 -> 1 -> 2 -> 3
 
                     } else {
-                        // SIKLUS STANDARD (Yellow Flag / Red Flag biasa: 2 tahap ganti-ganti)
+                        // SIKLUS STANDARD (Yellow Flag / Red Flag biasa)
                         if (step === 0) {
                             mainText.innerText = globalStatus.text;
                             subText.innerText = "";
@@ -477,8 +480,7 @@
                 }
 
                 updateBlink();
-                // Durasi diset ke 2000ms (2 detik) per tampilan teks/warna
-                blinkInterval = setInterval(updateBlink, 2000);
+                blinkInterval = setInterval(updateBlink, 2000); // Durasi 2 Detik
 
             } else {
                 mainText.innerText = globalStatus.text || "WAITING...";
@@ -489,4 +491,5 @@
         });
     </script>
 </body>
-</html>
+            </html>
+            
