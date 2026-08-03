@@ -89,12 +89,12 @@
             margin-top: 10px;
         }
 
-        #password-modal {
+        #password-modal, #penalty-modal {
             display: none;
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.85);
-            z-index: 999;
+            z-index: 9999;
             padding-top: 50px;
         }
         .modal-content {
@@ -136,16 +136,15 @@
             cursor: pointer;
         }
 
-        .penalty-btn {
-            background-color: #ff3333;
+        .driver-pen-btn {
+            background-color: #d32f2f;
             color: white;
             border: none;
-            padding: 10px;
+            padding: 10px 15px;
             margin: 5px;
             border-radius: 5px;
             font-weight: bold;
             cursor: pointer;
-            width: 45%;
         }
 
         .back-btn { background-color: #6c757d; color: white; margin-top: 15px; padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer; }
@@ -171,6 +170,18 @@
         </div>
     </div>
 
+    <!-- MODAL PENALTY SELECTION -->
+    <div id="penalty-modal">
+        <div class="modal-content">
+            <h3 id="pen-target-title" style="color:#ff4444;">PENALTY TARGET</h3>
+            <p style="font-size:12px; color:#aaa; margin-bottom:15px;">Pilih Jenis Penalti yang Diberikan:</p>
+            <button class="flag-btn" style="background:#ff9800; color:#fff;" onclick="applyPenalty('WARNING', '+5 SEC PENALTY')">+5 SEC PENALTY</button>
+            <button class="flag-btn" style="background:#dc3545; color:#fff;" onclick="applyPenalty('PENALTY', 'DRIVE THROUGH')">DRIVE THROUGH</button>
+            <button class="flag-btn" style="background:#28a745; color:#fff;" onclick="applyPenalty('CLEAR', '')">CLEAR PENALTY</button>
+            <button class="back-btn" style="margin-top:10px;" onclick="closePenaltyModal()">Batal</button>
+        </div>
+    </div>
+
     <!-- 3. DRIVER SETUP -->
     <div id="driver-setup" class="page">
         <h2>Registrasi Driver</h2>
@@ -192,16 +203,15 @@
         <button class="flag-btn finish" onclick="setGlobalFlag('FINISH / CHEQUERED', '', '#000000', '#ffffff', false, 'standard')">FINISH</button>
         <button class="flag-btn clear" onclick="setGlobalFlag('TRACK CLEAR', '', '#333333', '#ffffff', false, 'standard')">TRACK CLEAR</button>
 
-        <!-- FITUR PENALTY TARGET -->
+        <!-- FITUR PENALTY TARGET AUTOMATIC -->
         <div class="admin-section" style="border-color: #ff3333;">
-            <h3 style="color:#ff4444;">QUICK PENALTY SYSTEM</h3>
-            <p style="font-size:12px; color:#ccc; margin-bottom:10px;">Kirim Peringatan / Penalti Suara ke Driver:</p>
-            <input type="number" id="penalty-driver-num" class="input-box" placeholder="No Mobil Target (cth: 05)" style="margin-bottom:8px;">
-            <div>
-                <button class="penalty-btn" onclick="sendPenalty('WARNING', '+5 SEC PENALTY')">+5s Penalty</button>
-                <button class="penalty-btn" onclick="sendPenalty('PENALTY', 'DRIVE THROUGH')">Drive Through</button>
+            <h3 style="color:#ff4444;">PENALTY CONTROL</h3>
+            <p style="font-size:12px; color:#ccc; margin-bottom:10px;">Klik driver untuk beri/hapus Penalti + Suara:</p>
+            <div id="penalty-buttons-list">
+                <i style="font-size:12px; color:#888;">Belum ada driver...</i>
             </div>
-            <button class="back-btn" style="background:#555; color:#fff; width:100%; margin-top:8px;" onclick="clearPenalty()">Clear Penalty Target</button>
+            <br>
+            <button class="back-btn" style="background:#ff3333; color:#fff;" onclick="clearAllPenalties()">Reset Semua Penalti</button>
         </div>
 
         <div class="admin-section">
@@ -245,11 +255,12 @@
 
         let myDriverNumber = localStorage.getItem('registered_driver_num') || "";
         let blinkInterval = null;
-        let soundInterval = null;
         let currentDrivers = {};
         let currentBlueFlags = {};
+        let currentPenalties = {};
+        let selectedPenDriver = "";
 
-        // INI FUNGSI SUARA BEEP PERINGATAN (Web Audio API)
+        // SUARA BEEP PENALTY
         function playWarningBeep() {
             try {
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -257,16 +268,16 @@
                 const gain = audioCtx.createGain();
 
                 osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(880, audioCtx.currentTime); // Frekuensi nada BEEP tinggi
+                osc.frequency.setValueAtTime(900, audioCtx.currentTime); // Frekuensi BEEP
                 
-                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.35);
 
                 osc.connect(gain);
                 gain.connect(audioCtx.destination);
 
                 osc.start();
-                osc.stop(audioCtx.currentTime + 0.3);
+                osc.stop(audioCtx.currentTime + 0.35);
             } catch(e) {
                 console.log("Audio Error:", e);
             }
@@ -393,30 +404,32 @@
             });
         }
 
-        function sendPenalty(typeText, subText) {
-            const num = document.getElementById('penalty-driver-num').value.trim();
-            if (!num) {
-                alert("Masukkan Nomor Mobil Target Penalti!");
-                return;
-            }
-
-            database.ref('race/penalties/' + num).set({
-                title: typeText,
-                detail: subText
-            });
-
-            alert("Penalti dikirim ke Mobil #" + num);
+        function openPenaltyModal(driverNum) {
+            selectedPenDriver = driverNum;
+            document.getElementById('pen-target-title').innerText = "PENALTY TARGET #" + driverNum;
+            document.getElementById('penalty-modal').style.display = 'block';
         }
 
-        function clearPenalty() {
-            const num = document.getElementById('penalty-driver-num').value.trim();
-            if (num) {
-                database.ref('race/penalties/' + num).remove();
-                alert("Penalti Mobil #" + num + " Dibersihkan!");
+        function closePenaltyModal() {
+            document.getElementById('penalty-modal').style.display = 'none';
+        }
+
+        function applyPenalty(title, detail) {
+            if (!selectedPenDriver) return;
+            
+            if (title === 'CLEAR') {
+                database.ref('race/penalties/' + selectedPenDriver).remove();
             } else {
-                database.ref('race/penalties').remove();
-                alert("Seluruh Penalti Dibersihkan!");
+                database.ref('race/penalties/' + selectedPenDriver).set({
+                    title: title,
+                    detail: detail
+                });
             }
+            closePenaltyModal();
+        }
+
+        function clearAllPenalties() {
+            database.ref('race/penalties').remove();
         }
 
         function toggleBlueFlag(driverNum) {
@@ -444,7 +457,9 @@
 
         function renderDriverList() {
             const listDiv = document.getElementById('driver-buttons-list');
-            if (!listDiv) return;
+            const penDiv = document.getElementById('penalty-buttons-list');
+            
+            if (!listDiv || !penDiv) return;
 
             if (!currentDrivers || Object.keys(currentDrivers).length === 0) {
                 if (myDriverNumber) {
@@ -453,22 +468,35 @@
                     showPage('home-menu');
                 }
                 listDiv.innerHTML = '<i style="font-size:12px; color:#888;">Belum ada driver terhubung...</i>';
+                penDiv.innerHTML = '<i style="font-size:12px; color:#888;">Belum ada driver...</i>';
                 return;
             }
 
             listDiv.innerHTML = '';
+            penDiv.innerHTML = '';
+
             Object.keys(currentDrivers).forEach(function(num) {
                 const d = currentDrivers[num];
                 const isBlue = currentBlueFlags[num] ? true : false;
+                const isPen = currentPenalties[num] ? true : false;
 
+                // Blue Flag Button
                 const btn = document.createElement('button');
                 btn.className = 'driver-blue-btn';
                 btn.style.backgroundColor = isBlue ? '#00d2ff' : '#0056b3';
                 btn.style.color = isBlue ? '#000' : '#fff';
                 btn.innerText = '#' + d.number + ' - ' + d.name + (isBlue ? ' (BLUE)' : '');
                 btn.onclick = function() { toggleBlueFlag(d.number); };
-
                 listDiv.appendChild(btn);
+
+                // Penalty Button
+                const pBtn = document.createElement('button');
+                pBtn.className = 'driver-pen-btn';
+                pBtn.style.backgroundColor = isPen ? '#ff1744' : '#616161';
+                pBtn.style.color = '#fff';
+                pBtn.innerText = '#' + d.number + ' - ' + d.name + (isPen ? ' (PENALTY!)' : '');
+                pBtn.onclick = function() { openPenaltyModal(d.number); };
+                penDiv.appendChild(pBtn);
             });
         }
 
@@ -479,6 +507,11 @@
 
         database.ref('race/blue_flags').on('value', function(snapshot) {
             currentBlueFlags = snapshot.val() || {};
+            renderDriverList();
+        });
+
+        database.ref('race/penalties').on('value', function(snapshot) {
+            currentPenalties = snapshot.val() || {};
             renderDriverList();
         });
 
@@ -500,12 +533,8 @@
                 clearInterval(blinkInterval);
                 blinkInterval = null;
             }
-            if (soundInterval) {
-                clearInterval(soundInterval);
-                soundInterval = null;
-            }
 
-            // PRIORITAS 1: JIKA DRIVER KENA PENALTY (ADA SUARA BEEP)
+            // PRIORITAS 1: PENALTY BISA BUNYI SUARA
             if (myDriverNumber && penalties[myDriverNumber]) {
                 const pen = penalties[myDriverNumber];
                 let isRed = true;
@@ -513,10 +542,8 @@
                 mainText.innerText = pen.title || "PENALTY";
                 subText.innerText = pen.detail || "CHECK RACE CONTROL";
 
-                // Play suara Beep pertama kali
                 playWarningBeep();
 
-                // Kedip & Bunyi Beep berulang tiap 600ms
                 blinkInterval = setInterval(function() {
                     display.style.backgroundColor = isRed ? "#ff0000" : "#000000";
                     display.style.color = "#ffffff";
