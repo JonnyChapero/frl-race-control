@@ -429,10 +429,19 @@
                 let showState = true;
 
                 function updateBlink() {
-                    mainText.innerText = showState ? globalStatus.text : globalStatus.subText;
-                    subText.innerText = showState ? globalStatus.subText : "";
-                    display.style.backgroundColor = showState ? globalStatus.bg : "#000000";
-                    display.style.color = showState ? globalStatus.color : "#ffffff";
+                    if (showState) {
+                        // LAYAR WARNA (KUNING/ORANYE/MERAH) -> BENDERA UTAMA
+                        mainText.innerText = globalStatus.text;
+                        subText.innerText = "";
+                        display.style.backgroundColor = globalStatus.bg;
+                        display.style.color = globalStatus.color;
+                    } else {
+                        // LAYAR HITAM -> TEKS PERINGATAN (LIMIT 80 KM/H / BACK TO PIT)
+                        mainText.innerText = globalStatus.subText || globalStatus.text;
+                        subText.innerText = "";
+                        display.style.backgroundColor = "#000000";
+                        display.style.color = "#ffffff";
+                    }
                 }
 
                 updateBlink();
@@ -450,5 +459,5 @@
         });
     </script>
 </body>
-                                                                                </html>
-    
+    </html>
+            
