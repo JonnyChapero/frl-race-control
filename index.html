@@ -170,12 +170,12 @@
     <div id="admin-page" class="page">
         <h2>Panel Race Director</h2>
         
-        <button class="flag-btn green" onclick="setGlobalFlag('GREEN FLAG', '', '#28a745', '#ffffff', false)">GREEN FLAG</button>
-        <button class="flag-btn yellow" onclick="setGlobalFlag('YELLOW FLAG', 'LIMIT 80 KM/H', '#ffc107', '#000000', true)">YELLOW FLAG</button>
-        <button class="flag-btn fcy" onclick="setGlobalFlag('FULL COURSE YELLOW', 'LIMIT 80 KM/H', '#ff9800', '#000000', true)">FCY</button>
-        <button class="flag-btn red" onclick="setGlobalFlag('RED FLAG', 'BACK TO PIT', '#dc3545', '#ffffff', true)">RED FLAG</button>
-        <button class="flag-btn finish" onclick="setGlobalFlag('FINISH / CHEQUERED', '', '#000000', '#ffffff', false)">FINISH</button>
-        <button class="flag-btn clear" onclick="setGlobalFlag('TRACK CLEAR', '', '#333333', '#ffffff', false)">TRACK CLEAR</button>
+        <button class="flag-btn green" onclick="setGlobalFlag('GREEN FLAG', '', '#28a745', '#ffffff', false, 'standard')">GREEN FLAG</button>
+        <button class="flag-btn yellow" onclick="setGlobalFlag('YELLOW FLAG', 'LIMIT 80 KM/H', '#ffc107', '#000000', true, 'standard')">YELLOW FLAG</button>
+        <button class="flag-btn fcy" onclick="setGlobalFlag('FULL COURSE YELLOW', '80 KM/H', '#ff9800', '#000000', true, 'fcy')">FCY</button>
+        <button class="flag-btn red" onclick="setGlobalFlag('RED FLAG', 'BACK TO PIT', '#dc3545', '#ffffff', true, 'standard')">RED FLAG</button>
+        <button class="flag-btn finish" onclick="setGlobalFlag('FINISH / CHEQUERED', '', '#000000', '#ffffff', false, 'standard')">FINISH</button>
+        <button class="flag-btn clear" onclick="setGlobalFlag('TRACK CLEAR', '', '#333333', '#ffffff', false, 'standard')">TRACK CLEAR</button>
 
         <div class="blue-section">
             <h3 style="color:#00aaff;">BLUE FLAG TARGET</h3>
@@ -326,7 +326,7 @@
             });
         }
 
-        function setGlobalFlag(statusText, subText, bgColor, textColor, isBlinking) {
+        function setGlobalFlag(statusText, subText, bgColor, textColor, isBlinking, modeType) {
             database.ref('race/blue_flags').remove();
 
             database.ref('race/status').set({
@@ -334,7 +334,8 @@
                 subText: subText || '',
                 bg: bgColor,
                 color: textColor,
-                blink: isBlinking || false
+                blink: isBlinking || false,
+                mode: modeType || 'standard'
             });
         }
 
@@ -426,29 +427,58 @@
                 }, 500);
 
             } else if (globalStatus.blink) {
-                let showState = true;
+                let step = 0;
 
                 function updateBlink() {
-                    if (showState) {
-                        // LAYAR WARNA (KUNING/ORANYE/MERAH) -> BENDERA UTAMA
-                        mainText.innerText = globalStatus.text;
-                        subText.innerText = "";
-                        display.style.backgroundColor = globalStatus.bg;
-                        display.style.color = globalStatus.color;
+                    if (globalStatus.mode === 'fcy') {
+                        // SIKLUS KHUSUS FCY (4 TAHAP @ 2 DETIK)
+                        if (step === 0) {
+                            // Tahap 1: Kuning - Full Course Yellow
+                            mainText.innerText = "FULL COURSE YELLOW";
+                            subText.innerText = "";
+                            display.style.backgroundColor = globalStatus.bg;
+                            display.style.color = globalStatus.color;
+                        } else if (step === 1) {
+                            // Tahap 2: Hitam - 80 KM/H
+                            mainText.innerText = "80 KM/H";
+                            subText.innerText = "";
+                            display.style.backgroundColor = "#000000";
+                            display.style.color = "#ffffff";
+                        } else if (step === 2) {
+                            // Tahap 3: Kuning - Don't Overtake
+                            mainText.innerText = "DON'T OVERTAKE";
+                            subText.innerText = "";
+                            display.style.backgroundColor = globalStatus.bg;
+                            display.style.color = globalStatus.color;
+                        } else if (step === 3) {
+                            // Tahap 4: Hitam - 80 KM/H
+                            mainText.innerText = "80 KM/H";
+                            subText.innerText = "";
+                            display.style.backgroundColor = "#000000";
+                            display.style.color = "#ffffff";
+                        }
+                        step = (step + 1) % 4; // Berputar 0 -> 1 -> 2 -> 3 -> 0
+
                     } else {
-                        // LAYAR HITAM -> TEKS PERINGATAN (LIMIT 80 KM/H / BACK TO PIT)
-                        mainText.innerText = globalStatus.subText || globalStatus.text;
-                        subText.innerText = "";
-                        display.style.backgroundColor = "#000000";
-                        display.style.color = "#ffffff";
+                        // SIKLUS STANDARD (Yellow Flag / Red Flag biasa: 2 tahap ganti-ganti)
+                        if (step === 0) {
+                            mainText.innerText = globalStatus.text;
+                            subText.innerText = "";
+                            display.style.backgroundColor = globalStatus.bg;
+                            display.style.color = globalStatus.color;
+                        } else {
+                            mainText.innerText = globalStatus.subText || globalStatus.text;
+                            subText.innerText = "";
+                            display.style.backgroundColor = "#000000";
+                            display.style.color = "#ffffff";
+                        }
+                        step = (step + 1) % 2;
                     }
                 }
 
                 updateBlink();
-                blinkInterval = setInterval(function() {
-                    showState = !showState;
-                    updateBlink();
-                }, 750);
+                // Durasi diset ke 2000ms (2 detik) per tampilan teks/warna
+                blinkInterval = setInterval(updateBlink, 2000);
 
             } else {
                 mainText.innerText = globalStatus.text || "WAITING...";
@@ -459,5 +489,4 @@
         });
     </script>
 </body>
-    </html>
-            
+</html>
