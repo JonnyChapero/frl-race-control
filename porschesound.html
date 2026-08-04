@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Porsche 911 GT3 Sound Engine</title>
+    <title>Porsche 911 GT3 YouTube Sound</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
         body, html {
@@ -17,8 +17,8 @@
             width: 100vw; height: 100vh;
             display: flex; flex-direction: column;
             justify-content: center; align-items: center;
-            background: rgba(255, 0, 0, 0.2);
-            border: 2px dashed rgba(255, 255, 255, 0.6);
+            background: rgba(255, 0, 0, 0.25);
+            border: 2px dashed rgba(255, 255, 255, 0.7);
             color: #fff; font-weight: bold; font-size: 14px;
             text-shadow: 1px 1px 3px #000;
             touch-action: manipulation;
@@ -29,79 +29,70 @@
             border-color: #00ff64;
         }
 
-        .rpm-container {
-            width: 80%; height: 8px; background: rgba(0,0,0,0.6);
-            margin-top: 10px; border-radius: 4px; overflow: hidden;
-            border: 1px solid rgba(255,255,255,0.4);
-        }
-        #rpm-bar {
-            width: 0%; height: 100%; background: #00ff64; transition: width 0.03s linear;
+        #yt-player {
+            position: absolute;
+            width: 1px; height: 1px;
+            opacity: 0;
+            pointer-events: none;
         }
     </style>
 </head>
 <body>
 
     <div id="gas-pedal">
-        <span>GT3 REAL AUDIO GAS</span>
-        <div class="rpm-container"><div id="rpm-bar"></div></div>
+        <span>GT3 YT SOUND GAS</span>
+        <span style="font-size: 10px; opacity: 0.8; margin-top: 4px;">Tekan untuk melaju</span>
     </div>
 
-    <!-- Audio Element Menggunakan Sampel Suara Porsche GT3 / Straight Cut Gear -->
-    <audio id="gt3-audio" loop preload="auto" src="https://actions.google.com/sounds/v1/transportation/car_accel.ogg"></audio>
+    <!-- Hidden YouTube Player -->
+    <div id="yt-player"></div>
 
     <script>
-        const audio = document.getElementById('gt3-audio');
-        const pedal = document.getElementById('gas-pedal');
-        const rpmBar = document.getElementById('rpm-bar');
-
+        let player;
+        let isReady = false;
         let isPressed = false;
-        let currentPitch = 0.6; // Idle pitch
-        let maxPitch = 2.2;     // High RPM + Straight cut gear pitch
-        let interval = null;
+        const startTime = 63; // Detik 1:03
+
+        // Load YouTube IFrame API
+        var tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        var firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+        function onYouTubeIframeAPIReady() {
+            player = new YT.Player('yt-player', {
+                height: '200',
+                width: '200',
+                videoId: 'EqbGR3-jKZQ',
+                playerVars: {
+                    'playsinline': 1,
+                    'controls': 0,
+                    'start': startTime
+                },
+                events: {
+                    'onReady': () => { isReady = true; }
+                }
+            });
+        }
 
         function pressGas() {
-            if (!isPressed) {
+            if (isReady && !isPressed) {
                 isPressed = true;
-                if (audio.paused) {
-                    audio.play().catch(e => console.log("Audio Play Error:", e));
-                }
-
-                clearInterval(interval);
-                interval = setInterval(() => {
-                    if (isPressed && currentPitch < maxPitch) {
-                        currentPitch += 0.05; // Kecepatan akselerasi RPM
-                        audio.playbackRate = currentPitch;
-
-                        // Visual Bar RPM
-                        let percent = ((currentPitch - 0.6) / (maxPitch - 0.6)) * 100;
-                        rpmBar.style.width = Math.min(percent, 100) + '%';
-                    }
-                }, 30);
+                player.seekTo(startTime, true);
+                player.playVideo();
             }
         }
 
         function releaseGas() {
-            isPressed = false;
-            clearInterval(interval);
-            
-            interval = setInterval(() => {
-                if (!isPressed && currentPitch > 0.6) {
-                    currentPitch -= 0.06; // Deselerasi / Engine Brake
-                    audio.playbackRate = currentPitch;
-
-                    let percent = ((currentPitch - 0.6) / (maxPitch - 0.6)) * 100;
-                    rpmBar.style.width = Math.max(percent, 0) + '%';
-                } else if (currentPitch <= 0.6) {
-                    currentPitch = 0.6;
-                    audio.playbackRate = 0.6;
-                    rpmBar.style.width = '0%';
-                    clearInterval(interval);
-                }
-            }, 30);
+            if (isReady) {
+                isPressed = false;
+                player.pauseVideo();
+            }
         }
 
-        pedal.addEventListener('touchstart', (e) => { e.preventDefault(); pressGas(); });
-        pedal.addEventListener('touchend', (e) => { e.preventDefault(); releaseGas(); });
+        const pedal = document.getElementById('gas-pedal');
+        pedal.addEventListener('touchstart', (e) => { e.preventDefault(); pressGas(); }, { passive: false });
+        pedal.addEventListener('touchend', (e) => { e.preventDefault(); releaseGas(); }, { passive: false });
         pedal.addEventListener('mousedown', pressGas);
         pedal.addEventListener('mouseup', releaseGas);
     </script>
