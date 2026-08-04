@@ -17,7 +17,7 @@
             padding: 15px;
         }
 
-        /* 1. KOTAK BIRU BLINKING */
+        /* 1. KOTAK BIRU BLINKING (TEGAS / SHARP ON-OFF) */
         .blue-box-container {
             width: 100%;
             display: flex;
@@ -27,49 +27,57 @@
         .blue-box {
             width: 160px;
             height: 70px;
-            background-color: #0044ff;
-            border: 2px solid #001166;
-            box-shadow: 0 0 10px rgba(0, 68, 255, 0.5);
+            background-color: #0055ff;
+            border: 2px solid #0022aa;
+            box-shadow: 0 0 15px #0055ff;
             opacity: 0;
         }
 
-        /* Animasi 5x Kedip (0.5s) lalu Mati 2s (Total Siklus 4.5s) */
+        /* Animasi 5x Kedip Tegas (0.5s per siklus) lalu Mati 2s (Total 4.5s) */
         .blink-animation {
-            animation: blinkSequence 4.5s infinite;
+            animation: sharpBlink 4.5s infinite steps(1, end);
         }
 
-        @keyframes blinkSequence {
-            0%, 11%, 22%, 33%, 44% { opacity: 1; }
-            5.5%, 16.5%, 27.5%, 38.5%, 49.5% { opacity: 0; }
-            50%, 100% { opacity: 0; }
+        @keyframes sharpBlink {
+            0%   { opacity: 1; }
+            5.5% { opacity: 0; }
+            11%  { opacity: 1; }
+            16.5%{ opacity: 0; }
+            22%  { opacity: 1; }
+            27.5%{ opacity: 0; }
+            33%  { opacity: 1; }
+            38.5%{ opacity: 0; }
+            44%  { opacity: 1; }
+            49.5%{ opacity: 0; }
+            100% { opacity: 0; }
         }
 
         /* 2. DASHBOARD DISPLAY PORSCHE */
         .dashboard {
             width: 100%;
-            max-width: 420px;
+            max-width: 440px;
             background: #111;
             border: 3px solid #333;
             border-radius: 12px;
-            padding: 15px;
+            padding: 12px;
             box-shadow: 0 0 15px rgba(0,0,0,0.8);
             position: relative;
         }
 
-        /* Shift Light LED Dots */
+        /* Shift Light 16 LED Dots */
         .led-container {
             display: flex;
             justify-content: center;
-            gap: 6px;
-            margin-bottom: 8px;
+            gap: 4px;
+            margin-bottom: 10px;
         }
         .led {
-            width: 14px;
-            height: 14px;
+            width: 11px;
+            height: 11px;
             border-radius: 50%;
             background: #222;
             border: 1px solid #444;
-            transition: background 0.05s, box-shadow 0.05s;
+            transition: background 0.03s, box-shadow 0.03s;
         }
         .led.green.active { background: #00ff44; box-shadow: 0 0 8px #00ff44; }
         .led.yellow.active { background: #ffcc00; box-shadow: 0 0 8px #ffcc00; }
@@ -128,7 +136,7 @@
         /* 3. KONTROL BAWAH (SHIFT, BRAKE, GAS) */
         .controls-container {
             width: 100%;
-            max-width: 420px;
+            max-width: 440px;
             display: flex;
             justify-content: space-between;
             margin-top: 25px;
@@ -170,7 +178,6 @@
             align-items: center;
         }
 
-        /* Vertical Slider Container */
         .slider-box {
             width: 70px;
             height: 160px;
@@ -188,7 +195,7 @@
             width: 140px;
             height: 50px;
             background: transparent;
-            transform: rotate(-90deg); /* Diputar tegak lurus */
+            transform: rotate(-90deg);
             cursor: pointer;
         }
 
@@ -201,7 +208,6 @@
             border-radius: 3px;
         }
 
-        /* Visual bar warna di dalam slider */
         .brake-bar {
             position: absolute;
             bottom: 5px;
@@ -218,7 +224,6 @@
             border-radius: 2px;
             pointer-events: none;
         }
-
     </style>
 </head>
 <body>
@@ -230,18 +235,26 @@
 
     <!-- PORSCHE DASHBOARD -->
     <div class="dashboard">
-        <!-- LED SHIFT LIGHTS (10 LED) -->
+        <!-- SHIFT LIGHTS (16 LED: LUAR KIRI & KANAN -> TENGAH) -->
         <div class="led-container">
+            <!-- Kiri (1-8) -->
             <div class="led green" id="led-1"></div>
             <div class="led green" id="led-2"></div>
             <div class="led green" id="led-3"></div>
-            <div class="led green" id="led-4"></div>
+            <div class="led yellow" id="led-4"></div>
             <div class="led yellow" id="led-5"></div>
             <div class="led yellow" id="led-6"></div>
-            <div class="led yellow" id="led-7"></div>
+            <div class="led red" id="led-7"></div>
             <div class="led red" id="led-8"></div>
+            <!-- Kanan (9-16) -->
             <div class="led red" id="led-9"></div>
             <div class="led red" id="led-10"></div>
+            <div class="led yellow" id="led-11"></div>
+            <div class="led yellow" id="led-12"></div>
+            <div class="led yellow" id="led-13"></div>
+            <div class="led green" id="led-14"></div>
+            <div class="led green" id="led-15"></div>
+            <div class="led green" id="led-16"></div>
         </div>
 
         <div class="brand-title">PORSCHE</div>
@@ -297,9 +310,9 @@
     </div>
 
     <script>
-        let currentGear = 0; // 0 = N, 1-6 = Gear 1 to 6
+        let currentGear = 0; 
         const gearNames = ["N", "1", "2", "3", "4", "5", "6"];
-        const gearRatios = [0, 40, 75, 115, 155, 195, 240]; // Max speed per gear
+        const gearRatios = [0, 40, 75, 115, 155, 195, 240];
 
         let currentRpm = 1000;
         let currentSpeed = 0;
@@ -326,69 +339,63 @@
             }
         }
 
-        // Loop Simulasi Fisika RPM & Visual Bar
+        // Loop Simulasi Fisika
         setInterval(() => {
             let gasVal = parseInt(gasSlider.value);
             let brakeVal = parseInt(brakeSlider.value);
 
-            // Update Visual Height Bar Slider
             gasVisual.style.height = (gasVal * 1.4) + 'px';
             brakeVisual.style.height = (brakeVal * 1.4) + 'px';
 
-            // Kalkulasi RPM & Speed berdasarkan posisi Gas & Rem
             if (gasVal > 0) {
-                if (currentRpm < 9000) {
-                    currentRpm += (gasVal * 1.8);
-                }
+                if (currentRpm < 9000) currentRpm += (gasVal * 1.8);
             } else {
-                if (currentRpm > 1000) {
-                    currentRpm -= 120; // Engine brake
-                }
+                if (currentRpm > 1000) currentRpm -= 120;
             }
 
-            if (brakeVal > 0 && currentRpm > 1000) {
-                currentRpm -= (brakeVal * 3);
-            }
+            if (brakeVal > 0 && currentRpm > 1000) currentRpm -= (brakeVal * 3);
 
             if (currentRpm < 1000) currentRpm = 1000;
             if (currentRpm > 9000) currentRpm = 9000;
 
-            // Hitung Kecepatan Mobil
             if (currentGear > 0) {
                 let targetSpeed = (currentRpm / 9000) * gearRatios[currentGear];
                 currentSpeed += (targetSpeed - currentSpeed) * 0.1;
             } else {
-                currentSpeed *= 0.95; // Netral, mobil melambat
+                currentSpeed *= 0.95;
             }
 
             speedDisplay.innerText = Math.round(currentSpeed);
 
-            // Update Shift Light LEDs Progresif (10 LED)
+            // Update 16 LED Shift Lights (Luar ke Dalam)
             updateLeds(currentRpm);
 
         }, 30);
 
         function updateLeds(rpm) {
-            // LED menyala dari 3000 RPM sampai 8800 RPM
             const minRpm = 3000;
             const maxRpm = 8800;
-            let activeCount = 0;
+            let pairCount = 0; // Maksimal 8 pasang LED
 
             if (rpm > minRpm) {
-                activeCount = Math.floor(((rpm - minRpm) / (maxRpm - minRpm)) * 10);
+                pairCount = Math.floor(((rpm - minRpm) / (maxRpm - minRpm)) * 8);
             }
 
-            for (let i = 1; i <= 10; i++) {
-                let led = document.getElementById('led-' + i);
-                if (i <= activeCount) {
-                    led.classList.add('active');
-                } else {
-                    led.classList.remove('active');
+            // Reset semua LED
+            for (let i = 1; i <= 16; i++) {
+                document.getElementById('led-' + i).classList.remove('active');
+            }
+
+            // Menyalakan dari luar menuju ke tengah secara berpasangan
+            for (let p = 1; p <= pairCount; p++) {
+                if (p <= 8) {
+                    document.getElementById('led-' + p).classList.add('active');             // Dari Kiri ke Tengah (1 - 8)
+                    document.getElementById('led-' + (17 - p)).classList.add('active');      // Dari Kanan ke Tengah (16 - 9)
                 }
             }
         }
 
-        // Auto release slider ke 0 ketika dilepas jari/mouse (Optional - mirip pedal gas asli)
+        // Auto Return Pedal
         gasSlider.addEventListener('touchend', () => { autoReturn(gasSlider); });
         gasSlider.addEventListener('mouseup', () => { autoReturn(gasSlider); });
         brakeSlider.addEventListener('touchend', () => { autoReturn(brakeSlider); });
