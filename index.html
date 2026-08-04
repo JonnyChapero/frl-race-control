@@ -147,6 +147,19 @@
             cursor: pointer;
         }
 
+        .penalty-log-box {
+            background: #111;
+            border: 1px solid #444;
+            border-radius: 6px;
+            padding: 10px;
+            margin-top: 10px;
+            max-height: 150px;
+            overflow-y: auto;
+            text-align: left;
+            font-size: 12px;
+            color: #ff8888;
+        }
+
         .back-btn { background-color: #6c757d; color: white; margin-top: 15px; padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer; }
         .reset-btn { background-color: #dc3545; color: white; padding: 8px 14px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 10px; }
     </style>
@@ -174,15 +187,15 @@
     <div id="penalty-modal">
         <div class="modal-content">
             <h3 id="pen-target-title" style="color:#ff4444;">PENALTY TARGET</h3>
-            <p style="font-size:12px; color:#aaa; margin-bottom:15px;">Pilih Jenis Penalti (Muncul 5 Detik):</p>
-            <button class="flag-btn" style="background:#ff9800; color:#fff;" onclick="applyPenalty('WARNING', '+5 SEC PENALTY')">+5 SEC PENALTY</button>
-            <button class="flag-btn" style="background:#dc3545; color:#fff;" onclick="applyPenalty('PENALTY', 'DRIVE THROUGH')">DRIVE THROUGH</button>
-            <button class="flag-btn" style="background:#28a745; color:#fff;" onclick="applyPenalty('CLEAR', '')">CLEAR PENALTY</button>
+            <p style="font-size:12px; color:#aaa; margin-bottom:15px;">Pilih Jenis Penalti (Akumulatif):</p>
+            <button class="flag-btn" style="background:#ff9800; color:#fff;" onclick="applyPenalty('TIME', 5)">+5 SEC PENALTY</button>
+            <button class="flag-btn" style="background:#dc3545; color:#fff;" onclick="applyPenalty('DT', 0)">DRIVE THROUGH</button>
+            <button class="flag-btn" style="background:#28a745; color:#fff;" onclick="applyPenalty('CLEAR', 0)">CLEAR PENALTY</button>
             <button class="back-btn" style="margin-top:10px;" onclick="closePenaltyModal()">Batal</button>
         </div>
     </div>
 
-    <!-- 3. DRIVER SETUP (DENGAN LOBBY LOCK CHECK) -->
+    <!-- 3. DRIVER SETUP -->
     <div id="driver-setup" class="page">
         <h2>Registrasi Driver</h2>
         <p style="font-size:12px; color:#aaa; margin-bottom:15px;">Masukkan Nama dan Nomor Mobil kamu.</p>
@@ -213,12 +226,19 @@
         <button class="flag-btn finish" onclick="setGlobalFlag('FINISH / CHEQUERED', '', '#000000', '#ffffff', false, 'standard')">FINISH</button>
         <button class="flag-btn clear" onclick="setGlobalFlag('TRACK CLEAR', '', '#333333', '#ffffff', false, 'standard')">TRACK CLEAR</button>
 
-        <!-- FITUR PENALTY TARGET AUTOMATIC -->
+        <!-- FITUR PENALTY TARGET & LIST -->
         <div class="admin-section" style="border-color: #ff3333;">
             <h3 style="color:#ff4444;">PENALTY CONTROL</h3>
-            <p style="font-size:12px; color:#ccc; margin-bottom:10px;">Klik driver untuk beri Penalti (Auto-Clear 5 Detik):</p>
+            <p style="font-size:12px; color:#ccc; margin-bottom:10px;">Klik driver untuk beri Penalti:</p>
             <div id="penalty-buttons-list">
                 <i style="font-size:12px; color:#888;">Belum ada driver...</i>
+            </div>
+            
+            <div style="margin-top: 15px; border-top: 1px dashed #555; padding-top: 10px;">
+                <h4 style="font-size: 13px; color: #ff9999; margin-bottom: 5px;">REKAP PENALTI AKTIF:</h4>
+                <div id="penalty-log-container" class="penalty-log-box">
+                    <i>Belum ada penalti aktif...</i>
+                </div>
             </div>
             <br>
             <button class="back-btn" style="background:#ff3333; color:#fff;" onclick="clearAllPenalties()">Reset Semua Penalti</button>
@@ -252,7 +272,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <script>
-        const ADMIN_PASSWORD = "wongireng19";
+        const ADMIN_PASSWORD = "wongireng00";
 
         const firebaseConfig = {
             databaseURL: "https://frl-race-direction-default-rtdb.asia-southeast1.firebasedatabase.app"
@@ -269,7 +289,6 @@
         let currentBlueFlags = {};
         let currentPenalties = {};
         let selectedPenDriver = "";
-        let penaltyTimers = {}; 
         let isLobbyOpen = true;
 
         // GLOBAL AUDIO CONTEXT
@@ -394,7 +413,6 @@
             }
         }
 
-        // FUNGSI GEMBOK LOBBY
         function toggleLobbyLock() {
             const nextStatus = !isLobbyOpen;
             database.ref('race/settings/isLobbyOpen').set(nextStatus);
@@ -464,7 +482,8 @@
 
         function openPenaltyModal(driverNum) {
             selectedPenDriver = driverNum;
-            document.getElementById('pen-target-title').innerText = "PENALTY TARGET #" + driverNum;
+            const dName = currentDrivers[driverNum] ? currentDrivers[driverNum].name : driverNum;
+            document.getElementById('pen-target-title').innerText = "PENALTY #" + driverNum + " (" + dName + ")";
             document.getElementById('penalty-modal').style.display = 'block';
         }
 
@@ -472,37 +491,45 @@
             document.getElementById('penalty-modal').style.display = 'none';
         }
 
-        function applyPenalty(title, detail) {
+        function applyPenalty(type, value) {
             if (!selectedPenDriver) return;
             
             const targetNum = selectedPenDriver;
+            const penaltyRef = database.ref('race/penalties/' + targetNum);
 
-            if (penaltyTimers[targetNum]) {
-                clearTimeout(penaltyTimers[targetNum]);
-                delete penaltyTimers[targetNum];
-            }
+            penaltyRef.once('value', function(snapshot) {
+                let currentPen = snapshot.val();
 
-            if (title === 'CLEAR') {
-                database.ref('race/penalties/' + targetNum).remove();
-            } else {
-                database.ref('race/penalties/' + targetNum).set({
-                    title: title,
-                    detail: detail
-                });
+                if (type === 'CLEAR') {
+                    penaltyRef.remove();
+                } else if (type === 'TIME') {
+                    let newSeconds = 5;
+                    let titleText = "+5 SEC PENALTY";
+                    
+                    if (currentPen && currentPen.type === 'TIME') {
+                        newSeconds = currentPen.seconds + value;
+                        titleText = "+" + newSeconds + " SEC PENALTY";
+                    }
 
-                penaltyTimers[targetNum] = setTimeout(function() {
-                    database.ref('race/penalties/' + targetNum).remove();
-                    delete penaltyTimers[targetNum];
-                }, 5000);
-            }
-            closePenaltyModal();
+                    penaltyRef.set({
+                        type: 'TIME',
+                        title: titleText,
+                        detail: "TIME PENALTY ADDED",
+                        seconds: newSeconds
+                    });
+                } else if (type === 'DT') {
+                    penaltyRef.set({
+                        type: 'DT',
+                        title: "DRIVE THROUGH",
+                        detail: "PIT LANE PENALTY",
+                        seconds: 0
+                    });
+                }
+                closePenaltyModal();
+            });
         }
 
         function clearAllPenalties() {
-            Object.keys(penaltyTimers).forEach(function(key) {
-                clearTimeout(penaltyTimers[key]);
-            });
-            penaltyTimers = {};
             database.ref('race/penalties').remove();
         }
 
@@ -532,8 +559,9 @@
         function renderDriverList() {
             const listDiv = document.getElementById('driver-buttons-list');
             const penDiv = document.getElementById('penalty-buttons-list');
+            const logBox = document.getElementById('penalty-log-container');
             
-            if (!listDiv || !penDiv) return;
+            if (!listDiv || !penDiv || !logBox) return;
 
             if (!currentDrivers || Object.keys(currentDrivers).length === 0) {
                 if (myDriverNumber) {
@@ -543,11 +571,15 @@
                 }
                 listDiv.innerHTML = '<i style="font-size:12px; color:#888;">Belum ada driver terhubung...</i>';
                 penDiv.innerHTML = '<i style="font-size:12px; color:#888;">Belum ada driver...</i>';
+                logBox.innerHTML = '<i>Belum ada penalti aktif...</i>';
                 return;
             }
 
             listDiv.innerHTML = '';
             penDiv.innerHTML = '';
+            
+            let logHtml = '';
+            let hasActivePenalty = false;
 
             Object.keys(currentDrivers).forEach(function(num) {
                 const d = currentDrivers[num];
@@ -566,10 +598,21 @@
                 pBtn.className = 'driver-pen-btn';
                 pBtn.style.backgroundColor = isPen ? '#ff1744' : '#616161';
                 pBtn.style.color = '#fff';
-                pBtn.innerText = '#' + d.number + ' - ' + d.name + (isPen ? ' (ACTIVE)' : '');
+                pBtn.innerText = '#' + d.number + ' - ' + d.name + (isPen ? ' (' + currentPenalties[num].title + ')' : '');
                 pBtn.onclick = function() { openPenaltyModal(d.number); };
                 penDiv.appendChild(pBtn);
+
+                if (isPen) {
+                    hasActivePenalty = true;
+                    logHtml += `• <b>#${d.number} ${d.name}</b>: <span style="color:#fff;">${currentPenalties[num].title}</span><br>`;
+                }
             });
+
+            if (!hasActivePenalty) {
+                logBox.innerHTML = '<i>Belum ada penalti aktif...</i>';
+            } else {
+                logBox.innerHTML = logHtml;
+            }
         }
 
         // LISTENER REALTIME FIREBASE SETTINGS
