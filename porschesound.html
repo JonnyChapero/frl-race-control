@@ -17,7 +17,7 @@
             padding: 15px;
         }
 
-        /* 1. KOTAK BIRU BLINKING (SHARP ON-OFF) */
+        /* 1. KOTAK BIRU BLINKING */
         .blue-box-container {
             width: 100%;
             display: flex;
@@ -81,7 +81,6 @@
         .led.yellow.active { background: #ffcc00; box-shadow: 0 0 8px #ffcc00; }
         .led.red.active { background: #ff0000; box-shadow: 0 0 8px #ff0000; }
         
-        /* Warna Biru Limiter Kedip */
         .led.blue-limiter { 
             background: #00d9ff !important; 
             box-shadow: 0 0 12px #00d9ff !important; 
@@ -306,14 +305,21 @@
     </div>
 
     <script>
-        let currentGear = 0; 
+        let currentGear = 0; // 0 = N, 1-6 = Gigi 1-6
         const gearNames = ["N", "1", "2", "3", "4", "5", "6"];
-        const gearMaxSpeed = [0, 85, 130, 175, 215, 260, 310];
-        const gearAccelFactor = [0, 0.45, 0.28, 0.18, 0.11, 0.07, 0.04];
+        
+        // Batas Kecepatan Maksimal Sesuai Spesifikasi (km/h)
+        const gearMaxSpeed = [0, 85, 140, 180, 225, 270, 311];
+        
+        // Kecepatan Minimal Ideal per Gigi
+        const gearMinSpeed = [0, 0, 45, 80, 120, 160, 200];
+
+        // Koefisien Torsi / Akselerasi Realistis (Gigi tinggi lebih berat)
+        const gearPowerFactor = [0, 0.28, 0.18, 0.10, 0.055, 0.032, 0.018];
 
         let currentSpeed = 0;  
         let currentRpm = 1000; 
-        let blinkState = false; // Toggle kedip limiter
+        let blinkState = false;
 
         const gasSlider = document.getElementById('gas-slider');
         const brakeSlider = document.getElementById('brake-slider');
@@ -337,7 +343,7 @@
             }
         }
 
-        // Loop Simulasi Fisika (30ms)
+        // Loop Simulasi Fisika Real-Time (Setiap 20ms)
         setInterval(() => {
             let gasVal = parseInt(gasSlider.value) / 100;     
             let brakeVal = parseInt(brakeSlider.value) / 100; 
@@ -345,61 +351,101 @@
             gasVisual.style.height = (gasVal * 140) + 'px';
             brakeVisual.style.height = (brakeVal * 140) + 'px';
 
-            let airDrag = 0.0006 * (currentSpeed * currentSpeed);
-            let rollingResistance = 0.05;
-            let totalResistance = airDrag + rollingResistance;
-            let brakingPower = brakeVal * 2.5;
+            // --- DINAMIKA FISIKA ---
+
+            // 1. Hambatan Alami Halus (Air Drag & Rolling Resistance)
+            // Nilai kecil agar kendaraan meluncur melambat sangat perlahan saat lepas gas
+            let airDrag = 0.00012 * (currentSpeed * currentSpeed);
+            let rollingResistance = 0.02;
+            let naturalDecel = airDrag + rollingResistance;
+
+            // 2. Rem (Brake Power)
+            let brakingPower = brakeVal * 1.8;
 
             if (currentGear === 0) {
+                // POSISI NETRAL (N)
                 if (gasVal > 0) {
-                    currentRpm += gasVal * 350;
+                    currentRpm += gasVal * 250;
                 } else {
-                    currentRpm -= 200;
+                    currentRpm -= 150;
                 }
-                currentSpeed -= (totalResistance + brakingPower);
+                // Meluncur bebas tanpa engine brake
+                currentSpeed -= (naturalDecel + brakingPower);
+
             } else {
-                let engineForce = gasVal * gearAccelFactor[currentGear] * 40;
-                let engineBrake = (gasVal === 0) ? (0.12 * currentGear) : 0;
+                // POSISI BERGIGI (1 - 6)
+                let maxGearSpd = gearMaxSpeed[currentGear];
+                
+                // Pembatas Kecepatan Berdasarkan Gigi
+                // Jika mobil sudah lebih kencang dari batas gigi, mesin menahan (Engine Limit)
+                let canAccelerate = currentSpeed < maxGearSpd;
 
-                currentSpeed += (engineForce - totalResistance - engineBrake - brakingPower);
+                // Torsi Mesin berdasarkan Posisi Pedal & Gigi
+                let acceleration = 0;
+                if (gasVal > 0 && canAccelerate) {
+                    // Efisiensi daya jika gigi terlalu tinggi pada kecepatan rendah (Beban Mesin)
+                    let efficiency = 1.0;
+                    if (currentSpeed < gearMinSpeed[currentGear]) {
+                        efficiency = 0.35 + (currentSpeed / gearMinSpeed[currentGear]) * 0.65;
+                    }
+                    acceleration = gasVal * gearPowerFactor[currentGear] * efficiency * 22;
+                }
 
-                if (currentSpeed > gearMaxSpeed[6]) currentSpeed = gearMaxSpeed[6];
+                // Engine Brake sangat ringan saat lepas gas
+                let engineBrake = (gasVal === 0) ? 0.03 : 0;
 
-                let targetRpm = (currentSpeed / gearMaxSpeed[currentGear]) * 9000;
-                currentRpm += (targetRpm - currentRpm) * 0.2;
+                // Hitung Perubahan Kecepatan
+                currentSpeed += (acceleration - naturalDecel - engineBrake - brakingPower);
+
+                // Hitung RPM Mesin Terhubung Langsung ke Laju Roda
+                // Menggunakan rasio antar rentang gigi
+                let prevGearMax = gearMaxSpeed[currentGear - 1];
+                let speedInGear = currentSpeed - prevGearMax;
+                let gearRange = maxGearSpd - prevGearMax;
+
+                if (currentSpeed <= prevGearMax) {
+                    // RPM Rendah / Under-rev
+                    targetRpm = 1200 + (currentSpeed / prevGearMax) * 2000;
+                } else {
+                    targetRpm = 3200 + (speedInGear / gearRange) * 5800; // 3200 s/d 9000 RPM
+                }
+
+                // Transisi RPM Halus mengikuti beban roda
+                currentRpm += (targetRpm - currentRpm) * 0.15;
             }
 
+            // Batas Min/Max
             if (currentSpeed < 0) currentSpeed = 0;
             if (currentRpm < 1000) currentRpm = 1000;
             if (currentRpm > 9000) currentRpm = 9000;
 
+            // Tampilkan Kecepatan
             speedDisplay.innerText = Math.floor(currentSpeed);
 
             // Update 16 LED Shift Lights
             updateLeds(currentRpm);
 
-        }, 30);
+        }, 20);
 
         function updateLeds(rpm) {
-            const minRpm = 3000;
+            const minRpm = 4500;
             const maxRpm = 8800;
 
-            // Reset Kelas Tambahan pada LED
             for (let i = 1; i <= 16; i++) {
                 let led = document.getElementById('led-' + i);
                 led.classList.remove('active', 'blue-limiter');
             }
 
-            // KONDISI 1: RPM MENTOK / LIMITER (>= 8800 RPM) -> KEDIP BIRU KESELURUHAN
+            // OVERREV / LIMITER: Kedip Biru Seluruh LED
             if (rpm >= maxRpm) {
-                blinkState = !blinkState; // Bolak-balik ON / OFF setiap tick
+                blinkState = !blinkState;
                 if (blinkState) {
                     for (let i = 1; i <= 16; i++) {
                         document.getElementById('led-' + i).classList.add('blue-limiter');
                     }
                 }
             } 
-            // KONDISI 2: RPM NORMAL -> PROGRESIF DARI LUAR KE DALAM
+            // PROGRESIF LED
             else if (rpm > minRpm) {
                 let pairCount = Math.floor(((rpm - minRpm) / (maxRpm - minRpm)) * 8);
                 for (let p = 1; p <= pairCount; p++) {
@@ -411,7 +457,7 @@
             }
         }
 
-        // Auto Return Pedal
+        // Auto Return Pedal saat dilepas
         gasSlider.addEventListener('touchend', () => { autoReturn(gasSlider); });
         gasSlider.addEventListener('mouseup', () => { autoReturn(gasSlider); });
         brakeSlider.addEventListener('touchend', () => { autoReturn(brakeSlider); });
