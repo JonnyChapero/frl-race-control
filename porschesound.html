@@ -3,98 +3,407 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Porsche 911 GT3 YouTube Sound</title>
+    <title>Porsche GT3 Dashboard Simulator</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
-        body, html {
-            width: 100%; height: 100%;
-            background: transparent;
-            overflow: hidden;
+        body {
+            background-color: #2b2b2b;
+            color: white;
             font-family: Arial, sans-serif;
-        }
-        
-        #gas-pedal {
-            width: 100vw; height: 100vh;
-            display: flex; flex-direction: column;
-            justify-content: center; align-items: center;
-            background: rgba(255, 0, 0, 0.25);
-            border: 2px dashed rgba(255, 255, 255, 0.7);
-            color: #fff; font-weight: bold; font-size: 14px;
-            text-shadow: 1px 1px 3px #000;
-            touch-action: manipulation;
-        }
-        
-        #gas-pedal:active {
-            background: rgba(0, 255, 100, 0.4);
-            border-color: #00ff64;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 15px;
         }
 
-        #yt-player {
-            position: absolute;
-            width: 1px; height: 1px;
+        /* 1. KOTAK BIRU BLINKING */
+        .blue-box-container {
+            width: 100%;
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 10px;
+        }
+        .blue-box {
+            width: 160px;
+            height: 70px;
+            background-color: #0044ff;
+            border: 2px solid #001166;
+            box-shadow: 0 0 10px rgba(0, 68, 255, 0.5);
             opacity: 0;
+        }
+
+        /* Animasi 5x Kedip (0.5s) lalu Mati 2s (Total Siklus 4.5s) */
+        .blink-animation {
+            animation: blinkSequence 4.5s infinite;
+        }
+
+        @keyframes blinkSequence {
+            0%, 11%, 22%, 33%, 44% { opacity: 1; }
+            5.5%, 16.5%, 27.5%, 38.5%, 49.5% { opacity: 0; }
+            50%, 100% { opacity: 0; }
+        }
+
+        /* 2. DASHBOARD DISPLAY PORSCHE */
+        .dashboard {
+            width: 100%;
+            max-width: 420px;
+            background: #111;
+            border: 3px solid #333;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.8);
+            position: relative;
+        }
+
+        /* Shift Light LED Dots */
+        .led-container {
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+        .led {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #222;
+            border: 1px solid #444;
+            transition: background 0.05s, box-shadow 0.05s;
+        }
+        .led.green.active { background: #00ff44; box-shadow: 0 0 8px #00ff44; }
+        .led.yellow.active { background: #ffcc00; box-shadow: 0 0 8px #ffcc00; }
+        .led.red.active { background: #ff0000; box-shadow: 0 0 8px #ff0000; }
+
+        .brand-title {
+            text-align: center;
+            font-weight: bold;
+            letter-spacing: 5px;
+            font-size: 14px;
+            color: #ccc;
+            margin-bottom: 10px;
+        }
+
+        .dash-main {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            background: #000;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #222;
+        }
+
+        .telemetry-left {
+            font-size: 10px;
+            line-height: 1.4;
+            color: #aaa;
+        }
+
+        .gear-center {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-left: 1px solid #222;
+            border-right: 1px solid #222;
+        }
+        .speed-val { font-size: 16px; color: #fff; font-weight: bold; }
+        .gear-val { font-size: 48px; font-weight: bold; color: #fff; line-height: 1; }
+
+        .telemetry-right {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .dry-badge {
+            align-self: flex-end;
+            border: 1px solid #00ffff;
+            color: #00ffff;
+            font-size: 9px;
+            padding: 1px 4px;
+            border-radius: 2px;
+        }
+
+        /* 3. KONTROL BAWAH (SHIFT, BRAKE, GAS) */
+        .controls-container {
+            width: 100%;
+            max-width: 420px;
+            display: flex;
+            justify-content: space-between;
+            margin-top: 25px;
+        }
+
+        .shift-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        .control-title {
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 2px;
+            text-align: center;
+        }
+
+        .btn-shift {
+            width: 85px;
+            height: 75px;
+            background: #000;
+            border: 2px solid #333;
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .btn-shift:active { background: #333; }
+
+        .pedal-group {
+            display: flex;
+            gap: 15px;
+        }
+        .pedal-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Vertical Slider Container */
+        .slider-box {
+            width: 70px;
+            height: 160px;
+            background: #000;
+            border: 2px solid #333;
+            border-radius: 6px;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .slider-vertical {
+            -webkit-appearance: none;
+            width: 140px;
+            height: 50px;
+            background: transparent;
+            transform: rotate(-90deg); /* Diputar tegak lurus */
+            cursor: pointer;
+        }
+
+        .slider-vertical::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 40px;
+            width: 15px;
+            background: #555;
+            border: 1px solid #fff;
+            border-radius: 3px;
+        }
+
+        /* Visual bar warna di dalam slider */
+        .brake-bar {
+            position: absolute;
+            bottom: 5px;
+            width: 50px;
+            background: #ff0000;
+            border-radius: 2px;
             pointer-events: none;
         }
+        .gas-bar {
+            position: absolute;
+            bottom: 5px;
+            width: 50px;
+            background: #00ff64;
+            border-radius: 2px;
+            pointer-events: none;
+        }
+
     </style>
 </head>
 <body>
 
-    <div id="gas-pedal">
-        <span>GT3 YT SOUND GAS</span>
-        <span style="font-size: 10px; opacity: 0.8; margin-top: 4px;">Tekan untuk melaju</span>
+    <!-- KOTAK BIRU KANAN ATAS -->
+    <div class="blue-box-container">
+        <div class="blue-box blink-animation"></div>
     </div>
 
-    <!-- Hidden YouTube Player -->
-    <div id="yt-player"></div>
+    <!-- PORSCHE DASHBOARD -->
+    <div class="dashboard">
+        <!-- LED SHIFT LIGHTS (10 LED) -->
+        <div class="led-container">
+            <div class="led green" id="led-1"></div>
+            <div class="led green" id="led-2"></div>
+            <div class="led green" id="led-3"></div>
+            <div class="led green" id="led-4"></div>
+            <div class="led yellow" id="led-5"></div>
+            <div class="led yellow" id="led-6"></div>
+            <div class="led yellow" id="led-7"></div>
+            <div class="led red" id="led-8"></div>
+            <div class="led red" id="led-9"></div>
+            <div class="led red" id="led-10"></div>
+        </div>
+
+        <div class="brand-title">PORSCHE</div>
+
+        <div class="dash-main">
+            <div class="telemetry-left">
+                <div>RACE 1 💡</div>
+                <br>
+                <div>Oil temp: 82.4</div>
+                <div>Oil press: 5.8</div>
+                <div>Water temp: 73.4</div>
+            </div>
+
+            <div class="gear-center">
+                <div class="speed-val" id="speed-display">0</div>
+                <div class="gear-val" id="gear-display">N</div>
+            </div>
+
+            <div class="telemetry-right">
+                <div class="dry-badge">DRY</div>
+                <div style="font-size: 9px; color: #888;">TYRE PRESS<br>20.5 | 20.5</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONTROLS SECTION -->
+    <div class="controls-container">
+        <!-- SHIFT GEAR -->
+        <div class="shift-group">
+            <div class="control-title">shift</div>
+            <button class="btn-shift" onclick="shiftUp()">+</button>
+            <button class="btn-shift" onclick="shiftDown()">-</button>
+        </div>
+
+        <!-- BRAKE & GAS THROTTLE -->
+        <div class="pedal-group">
+            <div class="pedal-wrapper">
+                <div class="control-title">Brake<br>throttle</div>
+                <div class="slider-box">
+                    <div class="brake-bar" id="brake-visual" style="height: 0px;"></div>
+                    <input type="range" class="slider-vertical" id="brake-slider" min="0" max="100" value="0">
+                </div>
+            </div>
+
+            <div class="pedal-wrapper">
+                <div class="control-title">Gas<br>Throttle</div>
+                <div class="slider-box">
+                    <div class="gas-bar" id="gas-visual" style="height: 0px;"></div>
+                    <input type="range" class="slider-vertical" id="gas-slider" min="0" max="100" value="0">
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script>
-        let player;
-        let isReady = false;
-        let isPressed = false;
-        const startTime = 63; // Detik 1:03
+        let currentGear = 0; // 0 = N, 1-6 = Gear 1 to 6
+        const gearNames = ["N", "1", "2", "3", "4", "5", "6"];
+        const gearRatios = [0, 40, 75, 115, 155, 195, 240]; // Max speed per gear
 
-        // Load YouTube IFrame API
-        var tag = document.createElement('script');
-        tag.src = "https://www.youtube.com/iframe_api";
-        var firstScriptTag = document.getElementsByTagName('script')[0];
-        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+        let currentRpm = 1000;
+        let currentSpeed = 0;
 
-        function onYouTubeIframeAPIReady() {
-            player = new YT.Player('yt-player', {
-                height: '200',
-                width: '200',
-                videoId: 'EqbGR3-jKZQ',
-                playerVars: {
-                    'playsinline': 1,
-                    'controls': 0,
-                    'start': startTime
-                },
-                events: {
-                    'onReady': () => { isReady = true; }
+        const gasSlider = document.getElementById('gas-slider');
+        const brakeSlider = document.getElementById('brake-slider');
+        const gasVisual = document.getElementById('gas-visual');
+        const brakeVisual = document.getElementById('brake-visual');
+
+        const gearDisplay = document.getElementById('gear-display');
+        const speedDisplay = document.getElementById('speed-display');
+
+        function shiftUp() {
+            if (currentGear < 6) {
+                currentGear++;
+                gearDisplay.innerText = gearNames[currentGear];
+            }
+        }
+
+        function shiftDown() {
+            if (currentGear > 0) {
+                currentGear--;
+                gearDisplay.innerText = gearNames[currentGear];
+            }
+        }
+
+        // Loop Simulasi Fisika RPM & Visual Bar
+        setInterval(() => {
+            let gasVal = parseInt(gasSlider.value);
+            let brakeVal = parseInt(brakeSlider.value);
+
+            // Update Visual Height Bar Slider
+            gasVisual.style.height = (gasVal * 1.4) + 'px';
+            brakeVisual.style.height = (brakeVal * 1.4) + 'px';
+
+            // Kalkulasi RPM & Speed berdasarkan posisi Gas & Rem
+            if (gasVal > 0) {
+                if (currentRpm < 9000) {
+                    currentRpm += (gasVal * 1.8);
                 }
-            });
-        }
+            } else {
+                if (currentRpm > 1000) {
+                    currentRpm -= 120; // Engine brake
+                }
+            }
 
-        function pressGas() {
-            if (isReady && !isPressed) {
-                isPressed = true;
-                player.seekTo(startTime, true);
-                player.playVideo();
+            if (brakeVal > 0 && currentRpm > 1000) {
+                currentRpm -= (brakeVal * 3);
+            }
+
+            if (currentRpm < 1000) currentRpm = 1000;
+            if (currentRpm > 9000) currentRpm = 9000;
+
+            // Hitung Kecepatan Mobil
+            if (currentGear > 0) {
+                let targetSpeed = (currentRpm / 9000) * gearRatios[currentGear];
+                currentSpeed += (targetSpeed - currentSpeed) * 0.1;
+            } else {
+                currentSpeed *= 0.95; // Netral, mobil melambat
+            }
+
+            speedDisplay.innerText = Math.round(currentSpeed);
+
+            // Update Shift Light LEDs Progresif (10 LED)
+            updateLeds(currentRpm);
+
+        }, 30);
+
+        function updateLeds(rpm) {
+            // LED menyala dari 3000 RPM sampai 8800 RPM
+            const minRpm = 3000;
+            const maxRpm = 8800;
+            let activeCount = 0;
+
+            if (rpm > minRpm) {
+                activeCount = Math.floor(((rpm - minRpm) / (maxRpm - minRpm)) * 10);
+            }
+
+            for (let i = 1; i <= 10; i++) {
+                let led = document.getElementById('led-' + i);
+                if (i <= activeCount) {
+                    led.classList.add('active');
+                } else {
+                    led.classList.remove('active');
+                }
             }
         }
 
-        function releaseGas() {
-            if (isReady) {
-                isPressed = false;
-                player.pauseVideo();
-            }
-        }
+        // Auto release slider ke 0 ketika dilepas jari/mouse (Optional - mirip pedal gas asli)
+        gasSlider.addEventListener('touchend', () => { autoReturn(gasSlider); });
+        gasSlider.addEventListener('mouseup', () => { autoReturn(gasSlider); });
+        brakeSlider.addEventListener('touchend', () => { autoReturn(brakeSlider); });
+        brakeSlider.addEventListener('mouseup', () => { autoReturn(brakeSlider); });
 
-        const pedal = document.getElementById('gas-pedal');
-        pedal.addEventListener('touchstart', (e) => { e.preventDefault(); pressGas(); }, { passive: false });
-        pedal.addEventListener('touchend', (e) => { e.preventDefault(); releaseGas(); }, { passive: false });
-        pedal.addEventListener('mousedown', pressGas);
-        pedal.addEventListener('mouseup', releaseGas);
+        function autoReturn(slider) {
+            let interval = setInterval(() => {
+                if (slider.value > 0) {
+                    slider.value -= 10;
+                } else {
+                    slider.value = 0;
+                    clearInterval(interval);
+                }
+            }, 15);
+        }
     </script>
 </body>
 </html>
