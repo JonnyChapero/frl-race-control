@@ -17,7 +17,7 @@
             padding: 15px;
         }
 
-        /* 1. KOTAK BIRU BLINKING (TEGAS / SHARP ON-OFF) */
+        /* 1. KOTAK BIRU BLINKING (SHARP ON-OFF) */
         .blue-box-container {
             width: 100%;
             display: flex;
@@ -33,7 +33,6 @@
             opacity: 0;
         }
 
-        /* Animasi 5x Kedip Tegas (0.5s per siklus) lalu Mati 2s (Total 4.5s) */
         .blink-animation {
             animation: sharpBlink 4.5s infinite steps(1, end);
         }
@@ -64,7 +63,6 @@
             position: relative;
         }
 
-        /* Shift Light 16 LED Dots */
         .led-container {
             display: flex;
             justify-content: center;
@@ -82,6 +80,12 @@
         .led.green.active { background: #00ff44; box-shadow: 0 0 8px #00ff44; }
         .led.yellow.active { background: #ffcc00; box-shadow: 0 0 8px #ffcc00; }
         .led.red.active { background: #ff0000; box-shadow: 0 0 8px #ff0000; }
+        
+        /* Warna Biru Limiter Kedip */
+        .led.blue-limiter { 
+            background: #00d9ff !important; 
+            box-shadow: 0 0 12px #00d9ff !important; 
+        }
 
         .brand-title {
             text-align: center;
@@ -228,16 +232,12 @@
 </head>
 <body>
 
-    <!-- KOTAK BIRU KANAN ATAS -->
     <div class="blue-box-container">
         <div class="blue-box blink-animation"></div>
     </div>
 
-    <!-- PORSCHE DASHBOARD -->
     <div class="dashboard">
-        <!-- SHIFT LIGHTS (16 LED: LUAR KIRI & KANAN -> TENGAH) -->
         <div class="led-container">
-            <!-- Kiri (1-8) -->
             <div class="led green" id="led-1"></div>
             <div class="led green" id="led-2"></div>
             <div class="led green" id="led-3"></div>
@@ -246,7 +246,6 @@
             <div class="led yellow" id="led-6"></div>
             <div class="led red" id="led-7"></div>
             <div class="led red" id="led-8"></div>
-            <!-- Kanan (9-16) -->
             <div class="led red" id="led-9"></div>
             <div class="led red" id="led-10"></div>
             <div class="led yellow" id="led-11"></div>
@@ -280,16 +279,13 @@
         </div>
     </div>
 
-    <!-- CONTROLS SECTION -->
     <div class="controls-container">
-        <!-- SHIFT GEAR -->
         <div class="shift-group">
             <div class="control-title">shift</div>
             <button class="btn-shift" onclick="shiftUp()">+</button>
             <button class="btn-shift" onclick="shiftDown()">-</button>
         </div>
 
-        <!-- BRAKE & GAS THROTTLE -->
         <div class="pedal-group">
             <div class="pedal-wrapper">
                 <div class="control-title">Brake<br>throttle</div>
@@ -312,10 +308,12 @@
     <script>
         let currentGear = 0; 
         const gearNames = ["N", "1", "2", "3", "4", "5", "6"];
-        const gearRatios = [0, 40, 75, 115, 155, 195, 240];
+        const gearMaxSpeed = [0, 85, 130, 175, 215, 260, 310];
+        const gearAccelFactor = [0, 0.45, 0.28, 0.18, 0.11, 0.07, 0.04];
 
-        let currentRpm = 1000;
-        let currentSpeed = 0;
+        let currentSpeed = 0;  
+        let currentRpm = 1000; 
+        let blinkState = false; // Toggle kedip limiter
 
         const gasSlider = document.getElementById('gas-slider');
         const brakeSlider = document.getElementById('brake-slider');
@@ -339,35 +337,45 @@
             }
         }
 
-        // Loop Simulasi Fisika
+        // Loop Simulasi Fisika (30ms)
         setInterval(() => {
-            let gasVal = parseInt(gasSlider.value);
-            let brakeVal = parseInt(brakeSlider.value);
+            let gasVal = parseInt(gasSlider.value) / 100;     
+            let brakeVal = parseInt(brakeSlider.value) / 100; 
 
-            gasVisual.style.height = (gasVal * 1.4) + 'px';
-            brakeVisual.style.height = (brakeVal * 1.4) + 'px';
+            gasVisual.style.height = (gasVal * 140) + 'px';
+            brakeVisual.style.height = (brakeVal * 140) + 'px';
 
-            if (gasVal > 0) {
-                if (currentRpm < 9000) currentRpm += (gasVal * 1.8);
+            let airDrag = 0.0006 * (currentSpeed * currentSpeed);
+            let rollingResistance = 0.05;
+            let totalResistance = airDrag + rollingResistance;
+            let brakingPower = brakeVal * 2.5;
+
+            if (currentGear === 0) {
+                if (gasVal > 0) {
+                    currentRpm += gasVal * 350;
+                } else {
+                    currentRpm -= 200;
+                }
+                currentSpeed -= (totalResistance + brakingPower);
             } else {
-                if (currentRpm > 1000) currentRpm -= 120;
+                let engineForce = gasVal * gearAccelFactor[currentGear] * 40;
+                let engineBrake = (gasVal === 0) ? (0.12 * currentGear) : 0;
+
+                currentSpeed += (engineForce - totalResistance - engineBrake - brakingPower);
+
+                if (currentSpeed > gearMaxSpeed[6]) currentSpeed = gearMaxSpeed[6];
+
+                let targetRpm = (currentSpeed / gearMaxSpeed[currentGear]) * 9000;
+                currentRpm += (targetRpm - currentRpm) * 0.2;
             }
 
-            if (brakeVal > 0 && currentRpm > 1000) currentRpm -= (brakeVal * 3);
-
+            if (currentSpeed < 0) currentSpeed = 0;
             if (currentRpm < 1000) currentRpm = 1000;
             if (currentRpm > 9000) currentRpm = 9000;
 
-            if (currentGear > 0) {
-                let targetSpeed = (currentRpm / 9000) * gearRatios[currentGear];
-                currentSpeed += (targetSpeed - currentSpeed) * 0.1;
-            } else {
-                currentSpeed *= 0.95;
-            }
+            speedDisplay.innerText = Math.floor(currentSpeed);
 
-            speedDisplay.innerText = Math.round(currentSpeed);
-
-            // Update 16 LED Shift Lights (Luar ke Dalam)
+            // Update 16 LED Shift Lights
             updateLeds(currentRpm);
 
         }, 30);
@@ -375,22 +383,30 @@
         function updateLeds(rpm) {
             const minRpm = 3000;
             const maxRpm = 8800;
-            let pairCount = 0; // Maksimal 8 pasang LED
 
-            if (rpm > minRpm) {
-                pairCount = Math.floor(((rpm - minRpm) / (maxRpm - minRpm)) * 8);
-            }
-
-            // Reset semua LED
+            // Reset Kelas Tambahan pada LED
             for (let i = 1; i <= 16; i++) {
-                document.getElementById('led-' + i).classList.remove('active');
+                let led = document.getElementById('led-' + i);
+                led.classList.remove('active', 'blue-limiter');
             }
 
-            // Menyalakan dari luar menuju ke tengah secara berpasangan
-            for (let p = 1; p <= pairCount; p++) {
-                if (p <= 8) {
-                    document.getElementById('led-' + p).classList.add('active');             // Dari Kiri ke Tengah (1 - 8)
-                    document.getElementById('led-' + (17 - p)).classList.add('active');      // Dari Kanan ke Tengah (16 - 9)
+            // KONDISI 1: RPM MENTOK / LIMITER (>= 8800 RPM) -> KEDIP BIRU KESELURUHAN
+            if (rpm >= maxRpm) {
+                blinkState = !blinkState; // Bolak-balik ON / OFF setiap tick
+                if (blinkState) {
+                    for (let i = 1; i <= 16; i++) {
+                        document.getElementById('led-' + i).classList.add('blue-limiter');
+                    }
+                }
+            } 
+            // KONDISI 2: RPM NORMAL -> PROGRESIF DARI LUAR KE DALAM
+            else if (rpm > minRpm) {
+                let pairCount = Math.floor(((rpm - minRpm) / (maxRpm - minRpm)) * 8);
+                for (let p = 1; p <= pairCount; p++) {
+                    if (p <= 8) {
+                        document.getElementById('led-' + p).classList.add('active');
+                        document.getElementById('led-' + (17 - p)).classList.add('active');
+                    }
                 }
             }
         }
@@ -403,8 +419,8 @@
 
         function autoReturn(slider) {
             let interval = setInterval(() => {
-                if (slider.value > 0) {
-                    slider.value -= 10;
+                if (parseInt(slider.value) > 0) {
+                    slider.value = parseInt(slider.value) - 10;
                 } else {
                     slider.value = 0;
                     clearInterval(interval);
