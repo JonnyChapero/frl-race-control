@@ -7,9 +7,9 @@
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
         body {
-            background-color: #2b2b2b;
+            background-color: #1a1a1a;
             color: white;
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -17,37 +17,46 @@
             padding: 15px;
         }
 
-        /* 1. KOTAK BIRU BLINKING */
+        /* TOMBOL AUDIO */
+        .audio-btn {
+            background: #222;
+            border: 1px solid #555;
+            color: #00ff64;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 15px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+        .audio-btn.off { color: #ff4444; }
+
+        /* 1. KOTAK BIRU BLINKING (0.3s) */
         .blue-box-container {
             width: 100%;
+            max-width: 440px;
             display: flex;
             justify-content: flex-end;
             margin-bottom: 10px;
         }
         .blue-box {
             width: 160px;
-            height: 70px;
+            height: 60px;
             background-color: #0055ff;
             border: 2px solid #0022aa;
             box-shadow: 0 0 15px #0055ff;
             opacity: 0;
+            border-radius: 4px;
         }
 
         .blink-animation {
-            animation: sharpBlink 4.5s infinite steps(1, end);
+            animation: sharpBlink 0.3s infinite steps(1, end);
         }
 
         @keyframes sharpBlink {
             0%   { opacity: 1; }
-            5.5% { opacity: 0; }
-            11%  { opacity: 1; }
-            16.5%{ opacity: 0; }
-            22%  { opacity: 1; }
-            27.5%{ opacity: 0; }
-            33%  { opacity: 1; }
-            38.5%{ opacity: 0; }
-            44%  { opacity: 1; }
-            49.5%{ opacity: 0; }
+            50%  { opacity: 0; }
             100% { opacity: 0; }
         }
 
@@ -58,58 +67,58 @@
             background: #111;
             border: 3px solid #333;
             border-radius: 12px;
-            padding: 12px;
-            box-shadow: 0 0 15px rgba(0,0,0,0.8);
-            position: relative;
+            padding: 15px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.9);
         }
 
         .led-container {
             display: flex;
             justify-content: center;
-            gap: 4px;
-            margin-bottom: 10px;
+            gap: 5px;
+            margin-bottom: 12px;
         }
         .led {
-            width: 11px;
-            height: 11px;
+            width: 12px;
+            height: 12px;
             border-radius: 50%;
             background: #222;
             border: 1px solid #444;
-            transition: background 0.03s, box-shadow 0.03s;
+            transition: background 0.02s, box-shadow 0.02s;
         }
-        .led.green.active { background: #00ff44; box-shadow: 0 0 8px #00ff44; }
-        .led.yellow.active { background: #ffcc00; box-shadow: 0 0 8px #ffcc00; }
-        .led.red.active { background: #ff0000; box-shadow: 0 0 8px #ff0000; }
+        .led.green.active { background: #00ff44; box-shadow: 0 0 10px #00ff44; }
+        .led.yellow.active { background: #ffcc00; box-shadow: 0 0 10px #ffcc00; }
+        .led.red.active { background: #ff0000; box-shadow: 0 0 10px #ff0000; }
         
         .led.blue-limiter { 
             background: #00d9ff !important; 
-            box-shadow: 0 0 12px #00d9ff !important; 
+            box-shadow: 0 0 14px #00d9ff !important; 
         }
 
         .brand-title {
             text-align: center;
             font-weight: bold;
-            letter-spacing: 5px;
-            font-size: 14px;
-            color: #ccc;
-            margin-bottom: 10px;
+            letter-spacing: 6px;
+            font-size: 15px;
+            color: #d1d1d1;
+            margin-bottom: 12px;
         }
 
         .dash-main {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-columns: 1fr 1.2fr 1fr;
             gap: 10px;
-            background: #000;
-            padding: 10px;
-            border-radius: 6px;
+            background: #050505;
+            padding: 12px;
+            border-radius: 8px;
             border: 1px solid #222;
         }
 
         .telemetry-left {
             font-size: 10px;
-            line-height: 1.4;
-            color: #aaa;
+            line-height: 1.5;
+            color: #888;
         }
+        .telemetry-left span { color: #fff; }
 
         .gear-center {
             display: flex;
@@ -119,61 +128,65 @@
             border-left: 1px solid #222;
             border-right: 1px solid #222;
         }
-        .speed-val { font-size: 16px; color: #fff; font-weight: bold; }
-        .gear-val { font-size: 48px; font-weight: bold; color: #fff; line-height: 1; }
+        .speed-val { font-size: 18px; color: #fff; font-weight: bold; font-family: monospace; }
+        .speed-unit { font-size: 10px; color: #666; }
+        .gear-val { font-size: 52px; font-weight: bold; color: #fff; line-height: 1; }
 
         .telemetry-right {
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            align-items: flex-end;
         }
         .dry-badge {
-            align-self: flex-end;
             border: 1px solid #00ffff;
             color: #00ffff;
-            font-size: 9px;
-            padding: 1px 4px;
-            border-radius: 2px;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: bold;
         }
 
-        /* 3. KONTROL BAWAH (SHIFT, BRAKE, GAS) */
+        /* 3. KONTROL (SHIFT & PEDAL) */
         .controls-container {
             width: 100%;
             max-width: 440px;
             display: flex;
             justify-content: space-between;
-            margin-top: 25px;
+            margin-top: 20px;
         }
 
         .shift-group {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
         }
         .control-title {
             font-weight: bold;
-            font-size: 14px;
-            margin-bottom: 2px;
+            font-size: 12px;
+            color: #aaa;
+            text-transform: uppercase;
             text-align: center;
         }
 
         .btn-shift {
-            width: 85px;
-            height: 75px;
-            background: #000;
+            width: 80px;
+            height: 70px;
+            background: #111;
             border: 2px solid #333;
             color: white;
-            font-size: 28px;
+            font-size: 32px;
             font-weight: bold;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
+            transition: background 0.1s;
         }
         .btn-shift:active { background: #333; }
 
         .pedal-group {
             display: flex;
-            gap: 15px;
+            gap: 20px;
         }
         .pedal-wrapper {
             display: flex;
@@ -182,54 +195,58 @@
         }
 
         .slider-box {
-            width: 70px;
+            width: 65px;
             height: 160px;
-            background: #000;
-            border: 2px solid #333;
-            border-radius: 6px;
+            background: #0a0a0a;
+            border: 2px solid #222;
+            border-radius: 8px;
             position: relative;
             display: flex;
             justify-content: center;
             align-items: center;
+            overflow: hidden;
         }
 
         .slider-vertical {
             -webkit-appearance: none;
             width: 140px;
-            height: 50px;
+            height: 60px;
             background: transparent;
             transform: rotate(-90deg);
             cursor: pointer;
+            z-index: 2;
         }
 
         .slider-vertical::-webkit-slider-thumb {
             -webkit-appearance: none;
-            height: 40px;
-            width: 15px;
-            background: #555;
-            border: 1px solid #fff;
-            border-radius: 3px;
+            height: 50px;
+            width: 20px;
+            background: #444;
+            border: 1px solid #888;
+            border-radius: 4px;
         }
 
         .brake-bar {
             position: absolute;
-            bottom: 5px;
-            width: 50px;
-            background: #ff0000;
-            border-radius: 2px;
+            bottom: 0;
+            width: 100%;
+            background: rgba(255, 0, 0, 0.6);
             pointer-events: none;
+            z-index: 1;
         }
         .gas-bar {
             position: absolute;
-            bottom: 5px;
-            width: 50px;
-            background: #00ff64;
-            border-radius: 2px;
+            bottom: 0;
+            width: 100%;
+            background: rgba(0, 255, 100, 0.6);
             pointer-events: none;
+            z-index: 1;
         }
     </style>
 </head>
 <body>
+
+    <button class="audio-btn off" id="audio-toggle" onclick="toggleAudio()">🔊 Engine Sound: OFF</button>
 
     <div class="blue-box-container">
         <div class="blue-box blink-animation"></div>
@@ -261,33 +278,33 @@
             <div class="telemetry-left">
                 <div>RACE 1 💡</div>
                 <br>
-                <div>Oil temp: 82.4</div>
-                <div>Oil press: 5.8</div>
-                <div>Water temp: 73.4</div>
+                <div>Oil T: <span>82.4°C</span></div>
+                <div>Oil P: <span>5.8 bar</span></div>
+                <div>Wat T: <span>73.4°C</span></div>
             </div>
 
             <div class="gear-center">
-                <div class="speed-val" id="speed-display">0</div>
+                <div class="speed-val"><span id="speed-display">0</span> <span class="speed-unit">km/h</span></div>
                 <div class="gear-val" id="gear-display">N</div>
             </div>
 
             <div class="telemetry-right">
                 <div class="dry-badge">DRY</div>
-                <div style="font-size: 9px; color: #888;">TYRE PRESS<br>20.5 | 20.5</div>
+                <div style="font-size: 9px; color: #666; text-align: right; margin-top: 15px;">TYRE PRESS<br><span style="color:#aaa">20.5 | 20.5</span></div>
             </div>
         </div>
     </div>
 
     <div class="controls-container">
         <div class="shift-group">
-            <div class="control-title">shift</div>
+            <div class="control-title">Shift</div>
             <button class="btn-shift" onclick="shiftUp()">+</button>
             <button class="btn-shift" onclick="shiftDown()">-</button>
         </div>
 
         <div class="pedal-group">
             <div class="pedal-wrapper">
-                <div class="control-title">Brake<br>throttle</div>
+                <div class="control-title">Brake</div>
                 <div class="slider-box">
                     <div class="brake-bar" id="brake-visual" style="height: 0px;"></div>
                     <input type="range" class="slider-vertical" id="brake-slider" min="0" max="100" value="0">
@@ -295,7 +312,7 @@
             </div>
 
             <div class="pedal-wrapper">
-                <div class="control-title">Gas<br>Throttle</div>
+                <div class="control-title">Gas</div>
                 <div class="slider-box">
                     <div class="gas-bar" id="gas-visual" style="height: 0px;"></div>
                     <input type="range" class="slider-vertical" id="gas-slider" min="0" max="100" value="0">
@@ -305,29 +322,97 @@
     </div>
 
     <script>
-        let currentGear = 0; // 0 = N, 1-6 = Gigi 1-6
+        // STATUS TRANSMISI & MOBIL
+        let currentGear = 0; // 0 = N, 1..6
         const gearNames = ["N", "1", "2", "3", "4", "5", "6"];
-        
-        // Batas Kecepatan Maksimal Sesuai Spesifikasi (km/h)
-        const gearMaxSpeed = [0, 85, 140, 180, 225, 270, 311];
-        
-        // Kecepatan Minimal Ideal per Gigi
-        const gearMinSpeed = [0, 0, 45, 80, 120, 160, 200];
+        const gearMaxSpeeds = [0, 85, 140, 180, 225, 270, 311];
+        const gearTorque = [0, 180, 110, 70, 42, 26, 16];
 
-        // Koefisien Torsi / Akselerasi Realistis (Gigi tinggi lebih berat)
-        const gearPowerFactor = [0, 0.28, 0.18, 0.10, 0.055, 0.032, 0.018];
-
-        let currentSpeed = 0;  
-        let currentRpm = 1000; 
+        let speed = 0;
+        let rpm = 1000;
         let blinkState = false;
+        let lastTime = performance.now();
 
+        // ELEMENT DOM
         const gasSlider = document.getElementById('gas-slider');
         const brakeSlider = document.getElementById('brake-slider');
         const gasVisual = document.getElementById('gas-visual');
         const brakeVisual = document.getElementById('brake-visual');
-
         const gearDisplay = document.getElementById('gear-display');
         const speedDisplay = document.getElementById('speed-display');
+        const audioBtn = document.getElementById('audio-toggle');
+
+        // WEB AUDIO API SYNTHESIZER
+        let audioCtx = null;
+        let osc1 = null, osc2 = null;
+        let gainNode = null, filterNode = null;
+        let isAudioOn = false;
+
+        function initAudio() {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            
+            osc1 = audioCtx.createOscillator();
+            osc2 = audioCtx.createOscillator();
+            gainNode = audioCtx.createGain();
+            filterNode = audioCtx.createBiquadFilter();
+
+            osc1.type = 'sawtooth';
+            osc2.type = 'triangle';
+
+            filterNode.type = 'lowpass';
+            filterNode.frequency.setValueAtTime(800, audioCtx.currentTime);
+
+            gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime);
+
+            osc1.connect(filterNode);
+            osc2.connect(filterNode);
+            filterNode.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            osc1.start();
+            osc2.start();
+        }
+
+        function toggleAudio() {
+            if (!audioCtx) initAudio();
+
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            isAudioOn = !isAudioOn;
+            if (isAudioOn) {
+                audioBtn.innerText = "🔊 Engine Sound: ON";
+                audioBtn.classList.remove('off');
+            } else {
+                audioBtn.innerText = "🔊 Engine Sound: OFF";
+                audioBtn.classList.add('off');
+                gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+            }
+        }
+
+        function updateAudio(currentRpm, gasVal) {
+            if (!isAudioOn || !audioCtx) return;
+
+            // Frekuensi berdasarkan RPM (Simulasi 6-Silinder)
+            let baseFreq = (currentRpm / 60) * 3; // 3 pulsa per rotasi
+            osc1.frequency.setTargetAtTime(baseFreq, audioCtx.currentTime, 0.03);
+            osc2.frequency.setTargetAtTime(baseFreq * 0.5, audioCtx.currentTime, 0.03);
+
+            // Filter cutoff menyesuaikan RPM dan gas
+            let cutoff = 400 + (currentRpm * 0.8) + (gasVal * 1500);
+            filterNode.frequency.setTargetAtTime(cutoff, audioCtx.currentTime, 0.03);
+
+            // Volume dinamik
+            let volume = 0.03 + (gasVal * 0.12) + (currentRpm / 9000) * 0.08;
+
+            // Effek Rev Limiter Cutoff
+            if (currentRpm >= 8800 && blinkState) {
+                volume *= 0.1; // Stuttering sound
+            }
+
+            gainNode.gain.setTargetAtTime(volume, audioCtx.currentTime, 0.02);
+        }
 
         function shiftUp() {
             if (currentGear < 6) {
@@ -343,91 +428,63 @@
             }
         }
 
-        // Loop Simulasi Fisika Real-Time (Setiap 20ms)
-        setInterval(() => {
-            let gasVal = parseInt(gasSlider.value) / 100;     
-            let brakeVal = parseInt(brakeSlider.value) / 100; 
+        // SIMULASI UTAMA (Physics Loop)
+        function updatePhysics(now) {
+            let dt = (now - lastTime) / 1000;
+            if (dt > 0.1) dt = 0.1;
+            lastTime = now;
 
-            gasVisual.style.height = (gasVal * 140) + 'px';
-            brakeVisual.style.height = (brakeVal * 140) + 'px';
+            let gasVal = parseInt(gasSlider.value) / 100;
+            let brakeVal = parseInt(brakeSlider.value) / 100;
 
-            // --- DINAMIKA FISIKA ---
+            gasVisual.style.height = (gasVal * 100) + '%';
+            brakeVisual.style.height = (brakeVal * 100) + '%';
 
-            // 1. Hambatan Alami Halus (Air Drag & Rolling Resistance)
-            // Nilai kecil agar kendaraan meluncur melambat sangat perlahan saat lepas gas
-            let airDrag = 0.00012 * (currentSpeed * currentSpeed);
-            let rollingResistance = 0.02;
-            let naturalDecel = airDrag + rollingResistance;
-
-            // 2. Rem (Brake Power)
-            let brakingPower = brakeVal * 1.8;
+            let airDrag = 0.00018 * (speed * speed);
+            let rollingFriction = 1.2; 
+            let totalNaturalResistance = airDrag + rollingFriction;
+            let brakeForce = brakeVal * 120;
 
             if (currentGear === 0) {
-                // POSISI NETRAL (N)
-                if (gasVal > 0) {
-                    currentRpm += gasVal * 250;
-                } else {
-                    currentRpm -= 150;
-                }
-                // Meluncur bebas tanpa engine brake
-                currentSpeed -= (naturalDecel + brakingPower);
+                let targetRpm = 1000 + (gasVal * 8000);
+                rpm += (targetRpm - rpm) * (15 * dt);
+
+                let netForce = - (totalNaturalResistance + brakeForce);
+                speed += netForce * dt;
 
             } else {
-                // POSISI BERGIGI (1 - 6)
-                let maxGearSpd = gearMaxSpeed[currentGear];
-                
-                // Pembatas Kecepatan Berdasarkan Gigi
-                // Jika mobil sudah lebih kencang dari batas gigi, mesin menahan (Engine Limit)
-                let canAccelerate = currentSpeed < maxGearSpd;
+                let maxSpeedThisGear = gearMaxSpeeds[currentGear];
+                let calculatedRpm = (speed / maxSpeedThisGear) * 9000;
 
-                // Torsi Mesin berdasarkan Posisi Pedal & Gigi
-                let acceleration = 0;
-                if (gasVal > 0 && canAccelerate) {
-                    // Efisiensi daya jika gigi terlalu tinggi pada kecepatan rendah (Beban Mesin)
-                    let efficiency = 1.0;
-                    if (currentSpeed < gearMinSpeed[currentGear]) {
-                        efficiency = 0.35 + (currentSpeed / gearMinSpeed[currentGear]) * 0.65;
-                    }
-                    acceleration = gasVal * gearPowerFactor[currentGear] * efficiency * 22;
+                let engineForce = 0;
+                if (gasVal > 0 && calculatedRpm < 9000) {
+                    let rpmFactor = (calculatedRpm > 7500) ? (1 - (calculatedRpm - 7500) / 2000) : 1.0;
+                    engineForce = gasVal * gearTorque[currentGear] * rpmFactor;
                 }
 
-                // Engine Brake sangat ringan saat lepas gas
-                let engineBrake = (gasVal === 0) ? 0.03 : 0;
+                let engineBrake = (gasVal === 0) ? 2.5 : 0;
 
-                // Hitung Perubahan Kecepatan
-                currentSpeed += (acceleration - naturalDecel - engineBrake - brakingPower);
+                let netForce = engineForce - totalNaturalResistance - engineBrake - brakeForce;
+                speed += netForce * dt;
 
-                // Hitung RPM Mesin Terhubung Langsung ke Laju Roda
-                // Menggunakan rasio antar rentang gigi
-                let prevGearMax = gearMaxSpeed[currentGear - 1];
-                let speedInGear = currentSpeed - prevGearMax;
-                let gearRange = maxGearSpd - prevGearMax;
-
-                if (currentSpeed <= prevGearMax) {
-                    // RPM Rendah / Under-rev
-                    targetRpm = 1200 + (currentSpeed / prevGearMax) * 2000;
-                } else {
-                    targetRpm = 3200 + (speedInGear / gearRange) * 5800; // 3200 s/d 9000 RPM
+                if (speed > maxSpeedThisGear) {
+                    speed = maxSpeedThisGear;
                 }
 
-                // Transisi RPM Halus mengikuti beban roda
-                currentRpm += (targetRpm - currentRpm) * 0.15;
+                rpm = (speed / maxSpeedThisGear) * 9000;
+                if (rpm < 1000) rpm = 1000;
             }
 
-            // Batas Min/Max
-            if (currentSpeed < 0) currentSpeed = 0;
-            if (currentRpm < 1000) currentRpm = 1000;
-            if (currentRpm > 9000) currentRpm = 9000;
+            if (speed < 0) speed = 0;
 
-            // Tampilkan Kecepatan
-            speedDisplay.innerText = Math.floor(currentSpeed);
+            speedDisplay.innerText = Math.floor(speed);
+            updateLeds(rpm);
+            updateAudio(rpm, gasVal);
 
-            // Update 16 LED Shift Lights
-            updateLeds(currentRpm);
+            requestAnimationFrame(updatePhysics);
+        }
 
-        }, 20);
-
-        function updateLeds(rpm) {
+        function updateLeds(currentRpm) {
             const minRpm = 4500;
             const maxRpm = 8800;
 
@@ -436,8 +493,7 @@
                 led.classList.remove('active', 'blue-limiter');
             }
 
-            // OVERREV / LIMITER: Kedip Biru Seluruh LED
-            if (rpm >= maxRpm) {
+            if (currentRpm >= maxRpm) {
                 blinkState = !blinkState;
                 if (blinkState) {
                     for (let i = 1; i <= 16; i++) {
@@ -445,9 +501,8 @@
                     }
                 }
             } 
-            // PROGRESIF LED
-            else if (rpm > minRpm) {
-                let pairCount = Math.floor(((rpm - minRpm) / (maxRpm - minRpm)) * 8);
+            else if (currentRpm > minRpm) {
+                let pairCount = Math.floor(((currentRpm - minRpm) / (maxRpm - minRpm)) * 8);
                 for (let p = 1; p <= pairCount; p++) {
                     if (p <= 8) {
                         document.getElementById('led-' + p).classList.add('active');
@@ -457,22 +512,26 @@
             }
         }
 
-        // Auto Return Pedal saat dilepas
-        gasSlider.addEventListener('touchend', () => { autoReturn(gasSlider); });
-        gasSlider.addEventListener('mouseup', () => { autoReturn(gasSlider); });
-        brakeSlider.addEventListener('touchend', () => { autoReturn(brakeSlider); });
-        brakeSlider.addEventListener('mouseup', () => { autoReturn(brakeSlider); });
+        function setupAutoReturn(slider) {
+            const releaseHandler = () => {
+                let returnInterval = setInterval(() => {
+                    let val = parseInt(slider.value);
+                    if (val > 0) {
+                        slider.value = Math.max(0, val - 12);
+                    } else {
+                        clearInterval(returnInterval);
+                    }
+                }, 15);
+            };
 
-        function autoReturn(slider) {
-            let interval = setInterval(() => {
-                if (parseInt(slider.value) > 0) {
-                    slider.value = parseInt(slider.value) - 10;
-                } else {
-                    slider.value = 0;
-                    clearInterval(interval);
-                }
-            }, 15);
+            slider.addEventListener('mouseup', releaseHandler);
+            slider.addEventListener('touchend', releaseHandler);
         }
+
+        setupAutoReturn(gasSlider);
+        setupAutoReturn(brakeSlider);
+
+        requestAnimationFrame(updatePhysics);
     </script>
 </body>
 </html>
