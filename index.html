@@ -81,6 +81,7 @@
             line-height: 1.2; 
             color: white; 
             background-color: #333; 
+            transition: background-color 0.2s ease;
         }
 
         .sub-text-display {
@@ -109,7 +110,8 @@
 
         .flag-btn { width: 90%; max-width: 350px; padding: 14px; margin: 8px auto; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; display: block; transition: all 0.2s ease; }
         .green { background-color: #28a745; color: white; }
-        .yellow-admin { background-color: #ffc107; color: #ffffff; } 
+        .prep-green { background-color: #17a2b8; color: white; }
+        .yellow-admin { background-color: #ffc107; color: #000000; } 
         .fcy-admin { background-color: #ff9800; color: #ffffff; }     
         .red { background-color: #dc3545; color: white; }
         .finish { background-color: #000; color: white; border: 2px solid #fff; }
@@ -220,8 +222,9 @@
         </div>
 
         <button class="flag-btn green" onclick="setGlobalFlag('GREEN FLAG', '', '#28a745', '#ffffff', false, 'standard')">GREEN FLAG</button>
-        <button id="btn-yellow" class="flag-btn yellow-admin" onclick="handleYellowClick()">YELLOW FLAG</button>
-        <button id="btn-fcy" class="flag-btn fcy-admin" onclick="handleFcyClick()">FULL COURSE YELLOW</button>
+        <button class="flag-btn prep-green" onclick="setGlobalFlag('PREPARE TO GREEN', 'GET READY', '#17a2b8', '#ffffff', true, 'prep-green')">PREPARE TO GREEN</button>
+        <button class="flag-btn yellow-admin" onclick="setGlobalFlag('YELLOW FLAG', 'LIMIT 80 KM/H', '#ffc107', '#000000', true, 'yellow-blink')">YELLOW FLAG</button>
+        <button class="flag-btn fcy-admin" onclick="setGlobalFlag('FULL COURSE YELLOW', '80 KM/H', '#ff9800', '#000000', true, 'fcy')">FCY</button>
         <button class="flag-btn red" onclick="setGlobalFlag('RED FLAG', 'BACK TO PIT', '#dc3545', '#ffffff', true, 'red-blink')">RED FLAG</button>
         <button class="flag-btn finish" onclick="setGlobalFlag('FINISH / CHEQUERED', '', '#000000', '#ffffff', false, 'standard')">FINISH</button>
         <button class="flag-btn clear" onclick="setGlobalFlag('TRACK CLEAR', '', '#333333', '#ffffff', false, 'standard')">TRACK CLEAR</button>
@@ -291,7 +294,49 @@
         let selectedPenDriver = "";
         let isLobbyOpen = true;
 
-        let currentFlagStatus = "";
+        // GLOBAL AUDIO CONTEXT
+        let globalAudioCtx = null;
+
+        function getAudioContext() {
+            if (!globalAudioCtx) {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                if (AudioContextClass) {
+                    globalAudioCtx = new AudioContextClass();
+                }
+            }
+            if (globalAudioCtx && globalAudioCtx.state === 'suspended') {
+                globalAudioCtx.resume();
+            }
+            return globalAudioCtx;
+        }
+
+        function playWarningBeep() {
+            try {
+                const audioCtx = getAudioContext();
+                if (!audioCtx) return;
+
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(900, audioCtx.currentTime);
+                
+                gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc.start(audioCtx.currentTime);
+                osc.stop(audioCtx.currentTime + 0.35);
+            } catch(e) {
+                console.log("Audio Error:", e);
+            }
+        }
+
+        document.addEventListener('click', function() {
+            getAudioContext();
+        }, { once: true });
 
         window.addEventListener('DOMContentLoaded', function() {
             if (myDriverNumber) {
@@ -342,6 +387,7 @@
         });
 
         function handleDriverClick() {
+            getAudioContext();
             if (myDriverNumber) {
                 showPage('driver-page');
             } else {
@@ -378,6 +424,7 @@
         }
 
         function registerDriver() {
+            getAudioContext();
             const nameInput = document.getElementById('driver-name').value.trim();
             const numInput = document.getElementById('driver-number').value.trim();
 
@@ -424,7 +471,6 @@
             });
         }
 
-        // FUNGSI UTAMA MENGUBAH STATUS BENDERA
         function setGlobalFlag(statusText, subText, bgColor, textColor, isBlinking, modeType) {
             database.ref('race/blue_flags').remove();
             database.ref('race/penalties').remove();
@@ -439,37 +485,11 @@
             });
         }
 
-        // KONTROL TOMBOL YELLOW & FCY
-        function handleYellowClick() {
-            if (currentFlagStatus === 'YELLOW FLAG') {
-                triggerPrepareToGreen('#ffc107', '#000000');
-            } else {
-                setGlobalFlag('YELLOW FLAG', 'LIMIT 80 KM/H', '#ffc107', '#000000', true, 'yellow-blink');
-            }
-        }
-
-        function handleFcyClick() {
-            if (currentFlagStatus === 'FULL COURSE YELLOW') {
-                triggerPrepareToGreen('#ff9800', '#000000');
-            } else {
-                setGlobalFlag('FULL COURSE YELLOW', '80 KM/H', '#ff9800', '#000000', true, 'fcy');
-            }
-        }
-
-        // LANGSUNG DIUBAH KE GREEN FLAG SAAT KLIK PREPARE TO GREEN
-        function triggerPrepareToGreen(bgColor, textColor) {
-            setGlobalFlag('GREEN FLAG', '', '#28a745', '#ffffff', false, 'standard');
-        }
-
-        // LISTEN REALTIME DATABASE & SYNC TAMPILAN
         function listenToRaceStatus() {
             database.ref('race/status').on('value', function(snapshot) {
                 const data = snapshot.val();
                 if (!data) return;
 
-                currentFlagStatus = data.text;
-
-                // UPDATE STATUS DISPLAY DRIVER
                 const display = document.getElementById('flag-display');
                 const mainText = document.getElementById('main-text');
                 const subText = document.getElementById('sub-text');
@@ -479,37 +499,20 @@
                 display.style.backgroundColor = data.bg;
                 display.style.color = data.color;
 
-                // EFEK BLINKING
                 if (blinkInterval) clearInterval(blinkInterval);
 
                 if (data.blink) {
                     let isBlinkState = false;
                     blinkInterval = setInterval(function() {
                         isBlinkState = !isBlinkState;
-                        display.style.opacity = isBlinkState ? '0.3' : '1';
+                        // Mengedipkan warna teks tanpa mengubah/memudarkan warna background
+                        display.style.color = isBlinkState ? 'transparent' : data.color;
                     }, 500);
                 } else {
-                    display.style.opacity = '1';
-                }
-
-                // UPDATE TAMPILAN TOMBOL ADMIN DYNAMICALLY
-                const btnYellow = document.getElementById('btn-yellow');
-                const btnFcy = document.getElementById('btn-fcy');
-
-                if (data.text === 'YELLOW FLAG') {
-                    btnYellow.innerText = "PREPARE TO GREEN";
-                } else {
-                    btnYellow.innerText = "YELLOW FLAG";
-                }
-
-                if (data.text === 'FULL COURSE YELLOW') {
-                    btnFcy.innerText = "PREPARE TO GREEN";
-                } else {
-                    btnFcy.innerText = "FULL COURSE YELLOW";
+                    display.style.color = data.color;
                 }
             });
 
-            // LISTENERS DUA ARAH UNTUK PENALTI, LOBBY, & BLUE FLAGS
             database.ref('race/settings/isLobbyOpen').on('value', function(snapshot) {
                 isLobbyOpen = snapshot.val() !== false;
                 const statusText = document.getElementById('display-lobby-status');
