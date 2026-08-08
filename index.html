@@ -81,7 +81,6 @@
             line-height: 1.2; 
             color: white; 
             background-color: #333; 
-            transition: background-color 0.2s ease;
         }
 
         .sub-text-display {
@@ -108,10 +107,9 @@
             border: 1px solid #444;
         }
 
-        .flag-btn { width: 90%; max-width: 350px; padding: 14px; margin: 8px auto; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; display: block; transition: all 0.2s ease; }
+        .flag-btn { width: 90%; max-width: 350px; padding: 14px; margin: 8px auto; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; display: block; }
         .green { background-color: #28a745; color: white; }
-        .prep-green { background-color: #17a2b8; color: white; }
-        .yellow-admin { background-color: #ffc107; color: #000000; } 
+        .yellow-admin { background-color: #ffc107; color: #ffffff; } 
         .fcy-admin { background-color: #ff9800; color: #ffffff; }     
         .red { background-color: #dc3545; color: white; }
         .finish { background-color: #000; color: white; border: 2px solid #fff; }
@@ -222,7 +220,6 @@
         </div>
 
         <button class="flag-btn green" onclick="setGlobalFlag('GREEN FLAG', '', '#28a745', '#ffffff', false, 'standard')">GREEN FLAG</button>
-        <button class="flag-btn prep-green" onclick="setGlobalFlag('PREPARE TO GREEN', 'GET READY', '#17a2b8', '#ffffff', true, 'prep-green')">PREPARE TO GREEN</button>
         <button class="flag-btn yellow-admin" onclick="setGlobalFlag('YELLOW FLAG', 'LIMIT 80 KM/H', '#ffc107', '#000000', true, 'yellow-blink')">YELLOW FLAG</button>
         <button class="flag-btn fcy-admin" onclick="setGlobalFlag('FULL COURSE YELLOW', '80 KM/H', '#ff9800', '#000000', true, 'fcy')">FCY</button>
         <button class="flag-btn red" onclick="setGlobalFlag('RED FLAG', 'BACK TO PIT', '#dc3545', '#ffffff', true, 'red-blink')">RED FLAG</button>
@@ -288,6 +285,7 @@
 
         let myDriverNumber = localStorage.getItem('registered_driver_num') || "";
         let blinkInterval = null;
+        let penaltyNotifTimer = null; // Timer notifikasi driver 5 detik
         let currentDrivers = {};
         let currentBlueFlags = {};
         let currentPenalties = {};
@@ -350,8 +348,6 @@
                     }
                 });
             }
-            
-            listenToRaceStatus();
         });
 
         function showPage(pageId, addHistory) {
@@ -473,7 +469,6 @@
 
         function setGlobalFlag(statusText, subText, bgColor, textColor, isBlinking, modeType) {
             database.ref('race/blue_flags').remove();
-            database.ref('race/penalties').remove();
 
             database.ref('race/status').set({
                 text: statusText,
@@ -483,152 +478,6 @@
                 blink: isBlinking || false,
                 mode: modeType || 'standard'
             });
-        }
-
-        function listenToRaceStatus() {
-            database.ref('race/status').on('value', function(snapshot) {
-                const data = snapshot.val();
-                if (!data) return;
-
-                const display = document.getElementById('flag-display');
-                const mainText = document.getElementById('main-text');
-                const subText = document.getElementById('sub-text');
-
-                mainText.innerText = data.text;
-                subText.innerText = data.subText || '';
-                display.style.backgroundColor = data.bg;
-                display.style.color = data.color;
-
-                if (blinkInterval) clearInterval(blinkInterval);
-
-                if (data.blink) {
-                    let isBlinkState = false;
-                    blinkInterval = setInterval(function() {
-                        isBlinkState = !isBlinkState;
-                        // Mengedipkan warna teks tanpa mengubah/memudarkan warna background
-                        display.style.color = isBlinkState ? 'transparent' : data.color;
-                    }, 500);
-                } else {
-                    display.style.color = data.color;
-                }
-            });
-
-            database.ref('race/settings/isLobbyOpen').on('value', function(snapshot) {
-                isLobbyOpen = snapshot.val() !== false;
-                const statusText = document.getElementById('display-lobby-status');
-                const toggleBtn = document.getElementById('toggle-lobby-btn');
-                if (statusText) {
-                    statusText.innerText = isLobbyOpen ? "TERBUKA (BISA DAFTAR)" : "DIKUNCI (TIDAK BISA DAFTAR)";
-                    statusText.style.color = isLobbyOpen ? "#28a745" : "#ff3333";
-                }
-                if (toggleBtn) {
-                    toggleBtn.innerText = isLobbyOpen ? "KUNCI LOBBY" : "BUKA LOBBY";
-                    toggleBtn.style.background = isLobbyOpen ? "#dc3545" : "#28a745";
-                }
-            });
-
-            database.ref('race/drivers').on('value', function(snapshot) {
-                currentDrivers = snapshot.val() || {};
-                renderAdminDriverList();
-            });
-
-            database.ref('race/blue_flags').on('value', function(snapshot) {
-                currentBlueFlags = snapshot.val() || {};
-                renderAdminDriverList();
-            });
-
-            database.ref('race/penalties').on('value', function(snapshot) {
-                currentPenalties = snapshot.val() || {};
-                renderAdminDriverList();
-                renderPenaltyLogs();
-            });
-        }
-
-        function renderAdminDriverList() {
-            const blueContainer = document.getElementById('driver-buttons-list');
-            const penContainer = document.getElementById('penalty-buttons-list');
-            
-            if (!blueContainer || !penContainer) return;
-
-            blueContainer.innerHTML = '';
-            penContainer.innerHTML = '';
-
-            const keys = Object.keys(currentDrivers);
-            if (keys.length === 0) {
-                blueContainer.innerHTML = '<i style="font-size:12px; color:#888;">Belum ada driver terhubung...</i>';
-                penContainer.innerHTML = '<i style="font-size:12px; color:#888;">Belum ada driver terhubung...</i>';
-                return;
-            }
-
-            keys.forEach(function(num) {
-                const driver = currentDrivers[num];
-                const dName = driver.name || 'Driver';
-
-                // Blue Flag Button
-                const isBlue = currentBlueFlags[num] === true;
-                const bBtn = document.createElement('button');
-                bBtn.className = 'driver-blue-btn';
-                bBtn.style.background = isBlue ? '#ff0000' : '#0056b3';
-                bBtn.innerText = '#' + num + ' ' + dName + (isBlue ? ' (BLUE)' : '');
-                bBtn.onclick = function() { toggleBlueFlag(num); };
-                blueContainer.appendChild(bBtn);
-
-                // Penalty Button
-                const pBtn = document.createElement('button');
-                pBtn.className = 'driver-pen-btn';
-                pBtn.innerText = '#' + num + ' ' + dName;
-                pBtn.onclick = function() { openPenaltyModal(num); };
-                penContainer.appendChild(pBtn);
-            });
-        }
-
-        function renderPenaltyLogs() {
-            const container = document.getElementById('penalty-log-container');
-            if (!container) return;
-
-            container.innerHTML = '';
-            const keys = Object.keys(currentPenalties);
-
-            if (keys.length === 0) {
-                container.innerHTML = '<i>Belum ada penalti aktif...</i>';
-                return;
-            }
-
-            keys.forEach(function(num) {
-                const pen = currentPenalties[num];
-                const dName = currentDrivers[num] ? currentDrivers[num].name : num;
-                const div = document.createElement('div');
-                div.style.marginBottom = '4px';
-                div.innerText = '#' + num + ' (' + dName + '): ' + pen.title;
-                container.appendChild(div);
-            });
-        }
-
-        function toggleBlueFlag(driverNum) {
-            const ref = database.ref('race/blue_flags/' + driverNum);
-            ref.once('value', function(snapshot) {
-                if (snapshot.exists()) {
-                    ref.remove();
-                } else {
-                    ref.set(true);
-                }
-            });
-        }
-
-        function clearAllBlueFlags() {
-            database.ref('race/blue_flags').remove();
-        }
-
-        function clearAllPenalties() {
-            database.ref('race/penalties').remove();
-        }
-
-        function removeAllDrivers() {
-            if (confirm("Apakah Anda yakin ingin menghapus SELURUH daftar driver?")) {
-                database.ref('race/drivers').remove();
-                database.ref('race/blue_flags').remove();
-                database.ref('race/penalties').remove();
-            }
         }
 
         function openPenaltyModal(driverNum) {
@@ -648,35 +497,329 @@
             const targetNum = selectedPenDriver;
             const penaltyRef = database.ref('race/penalties/' + targetNum);
 
-            if (type === 'CLEAR') {
-                penaltyRef.remove();
-                closePenaltyModal();
-                return;
-            }
-
             penaltyRef.once('value', function(snapshot) {
                 let currentPen = snapshot.val();
 
-                if (type === 'TIME') {
-                    let newSeconds = value;
+                if (type === 'CLEAR') {
+                    penaltyRef.remove();
+                } else if (type === 'TIME') {
+                    let newSeconds = 5;
+                    let titleText = "+5 SEC PENALTY";
+                    
                     if (currentPen && currentPen.type === 'TIME') {
-                        newSeconds += (currentPen.value || 0);
+                        newSeconds = (currentPen.seconds || 0) + value;
+                        titleText = "+" + newSeconds + " SEC PENALTY";
                     }
+
+                    // Tambahkan timestamp update agar driver selalu tahu ada penalti baru masuk
                     penaltyRef.set({
                         type: 'TIME',
-                        value: newSeconds,
-                        title: '+' + newSeconds + ' SEC PENALTY'
+                        title: titleText,
+                        detail: "TIME PENALTY ADDED",
+                        seconds: newSeconds,
+                        updatedAt: Date.now()
                     });
                 } else if (type === 'DT') {
                     penaltyRef.set({
                         type: 'DT',
-                        value: 0,
-                        title: 'DRIVE THROUGH PENALTY'
+                        title: "DRIVE THROUGH",
+                        detail: "PIT LANE PENALTY",
+                        seconds: 0,
+                        updatedAt: Date.now()
                     });
                 }
                 closePenaltyModal();
             });
         }
+
+        function clearAllPenalties() {
+            database.ref('race/penalties').remove();
+        }
+
+        function toggleBlueFlag(driverNum) {
+            const ref = database.ref('race/blue_flags/' + driverNum);
+            ref.once('value', function(snapshot) {
+                if (snapshot.exists()) {
+                    ref.remove();
+                } else {
+                    ref.set(true);
+                }
+            });
+        }
+
+        function clearAllBlueFlags() {
+            database.ref('race/blue_flags').remove();
+        }
+
+        function removeAllDrivers() {
+            if (confirm("Yakin ingin menghapus SELURUH daftar driver dari session ini?")) {
+                database.ref('race/drivers').remove();
+                database.ref('race/blue_flags').remove();
+                database.ref('race/penalties').remove();
+            }
+        }
+
+        function renderDriverList() {
+            const listDiv = document.getElementById('driver-buttons-list');
+            const penDiv = document.getElementById('penalty-buttons-list');
+            const logBox = document.getElementById('penalty-log-container');
+            
+            if (!listDiv || !penDiv || !logBox) return;
+
+            if (!currentDrivers || Object.keys(currentDrivers).length === 0) {
+                if (myDriverNumber) {
+                    localStorage.removeItem('registered_driver_num');
+                    myDriverNumber = "";
+                    showPage('home-menu');
+                }
+                listDiv.innerHTML = '<i style="font-size:12px; color:#888;">Belum ada driver terhubung...</i>';
+                penDiv.innerHTML = '<i style="font-size:12px; color:#888;">Belum ada driver...</i>';
+                logBox.innerHTML = '<i>Belum ada penalti aktif...</i>';
+                return;
+            }
+
+            listDiv.innerHTML = '';
+            penDiv.innerHTML = '';
+            
+            let logHtml = '';
+            let hasActivePenalty = false;
+
+            Object.keys(currentDrivers).forEach(function(num) {
+                const d = currentDrivers[num];
+                const isBlue = currentBlueFlags[num] ? true : false;
+                const isPen = currentPenalties[num] ? true : false;
+
+                const btn = document.createElement('button');
+                btn.className = 'driver-blue-btn';
+                btn.style.backgroundColor = isBlue ? '#00d2ff' : '#0056b3';
+                btn.style.color = isBlue ? '#000' : '#fff';
+                btn.innerText = '#' + d.number + ' - ' + d.name + (isBlue ? ' (BLUE)' : '');
+                btn.onclick = function() { toggleBlueFlag(d.number); };
+                listDiv.appendChild(btn);
+
+                const pBtn = document.createElement('button');
+                pBtn.className = 'driver-pen-btn';
+                pBtn.style.backgroundColor = isPen ? '#ff1744' : '#616161';
+                pBtn.style.color = '#fff';
+                pBtn.innerText = '#' + d.number + ' - ' + d.name + (isPen ? ' (' + currentPenalties[num].title + ')' : '');
+                pBtn.onclick = function() { openPenaltyModal(d.number); };
+                penDiv.appendChild(pBtn);
+
+                if (isPen) {
+                    hasActivePenalty = true;
+                    logHtml += `• <b>#${d.number} ${d.name}</b>: <span style="color:#fff;">${currentPenalties[num].title}</span><br>`;
+                }
+            });
+
+            if (!hasActivePenalty) {
+                logBox.innerHTML = '<i>Belum ada penalti aktif...</i>';
+            } else {
+                logBox.innerHTML = logHtml;
+            }
+        }
+
+        // LISTENER REALTIME FIREBASE SETTINGS
+        database.ref('race/settings').on('value', function(snapshot) {
+            const settings = snapshot.val() || {};
+            isLobbyOpen = settings.isLobbyOpen !== undefined ? settings.isLobbyOpen : true;
+
+            const lobbyDisplay = document.getElementById('display-lobby-status');
+            const lobbyBtn = document.getElementById('toggle-lobby-btn');
+
+            if (lobbyDisplay) {
+                lobbyDisplay.innerText = isLobbyOpen ? "TERBUKA (Bisa Daftar)" : "TERKUNCI (Ditutup)";
+                lobbyDisplay.style.color = isLobbyOpen ? "#28a745" : "#dc3545";
+            }
+            if (lobbyBtn) {
+                lobbyBtn.innerText = isLobbyOpen ? "KUNCI LOBBY SEKARANG" : "BUKA KEMBALI LOBBY";
+                lobbyBtn.style.backgroundColor = isLobbyOpen ? "#dc3545" : "#28a745";
+            }
+        });
+
+        database.ref('race/drivers').on('value', function(snapshot) {
+            currentDrivers = snapshot.val() || {};
+            renderDriverList();
+        });
+
+        database.ref('race/blue_flags').on('value', function(snapshot) {
+            currentBlueFlags = snapshot.val() || {};
+            renderDriverList();
+        });
+
+        database.ref('race/penalties').on('value', function(snapshot) {
+            currentPenalties = snapshot.val() || {};
+            renderDriverList();
+        });
+
+        // TAMPILAN DRIVER
+        let lastPenTime = 0; // Menyimpan timestamp terakhir notifikasi dimunculkan
+
+        database.ref('race').on('value', function(snapshot) {
+            const data = snapshot.val();
+            if (!data) return;
+
+            if (myDriverNumber && data.drivers && !data.drivers[myDriverNumber]) {
+                localStorage.removeItem('registered_driver_num');
+                myDriverNumber = "";
+                alert("Sesi telah direset/berakhir oleh Admin.");
+                showPage('home-menu');
+                return;
+            }
+
+            const globalStatus = data.status || {};
+            const blueFlags = data.blue_flags || {};
+            const penalties = data.penalties || {};
+
+            const display = document.getElementById('flag-display');
+            const mainText = document.getElementById('main-text');
+            const subText = document.getElementById('sub-text');
+
+            if (!display || !mainText || !subText) return;
+
+            // Jika ada penalti baru masuk untuk driver ini
+            const myPenalty = myDriverNumber ? penalties[myDriverNumber] : null;
+            
+            if (myPenalty && myPenalty.updatedAt && myPenalty.updatedAt > lastPenTime) {
+                lastPenTime = myPenalty.updatedAt;
+
+                // Reset timer notifikasi jika sebelumnya sudah berjalan
+                if (penaltyNotifTimer) clearTimeout(penaltyNotifTimer);
+                if (blinkInterval) clearInterval(blinkInterval);
+
+                // Jalankan Notifikasi Layar Merah Bipselama 5 Detik
+                let isRed = true;
+                mainText.innerText = myPenalty.title || "PENALTY";
+                subText.innerText = myPenalty.detail || "CHECK RACE CONTROL";
+
+                playWarningBeep();
+
+                blinkInterval = setInterval(function() {
+                    display.style.backgroundColor = isRed ? "#ff0000" : "#000000";
+                    display.style.color = "#ffffff";
+                    if (isRed) playWarningBeep();
+                    isRed = !isRed;
+                }, 500);
+
+                // SETELAH 5 DETIK: Hentikan notifikasi & kembalikan ke bendera biasa
+                penaltyNotifTimer = setTimeout(function() {
+                    if (blinkInterval) clearInterval(blinkInterval);
+                    blinkInterval = null;
+                    penaltyNotifTimer = null;
+                    renderNormalFlags();
+                }, 5000);
+
+            } else if (!penaltyNotifTimer) {
+                // Jika tidak ada notifikasi penalti yang sedang tayang (5 detik), tampilkan bendera normal
+                renderNormalFlags();
+            }
+
+            function renderNormalFlags() {
+                if (blinkInterval) {
+                    clearInterval(blinkInterval);
+                    blinkInterval = null;
+                }
+
+                if (myDriverNumber && blueFlags[myDriverNumber]) {
+                    let isBlue = true;
+                    mainText.innerText = "BLUE FLAG";
+                    subText.innerText = "GIVE WAY TO LEADER!";
+                    
+                    blinkInterval = setInterval(function() {
+                        display.style.backgroundColor = isBlue ? "#0044ff" : "#000000";
+                        display.style.color = "#ffffff";
+                        isBlue = !isBlue;
+                    }, 500);
+
+                } else if (globalStatus.blink) {
+                    let step = 0;
+                    const mode = globalStatus.mode || 'standard';
+
+                    function updateBlink() {
+                        if (mode === 'fcy') {
+                            if (step === 0) {
+                                mainText.innerText = "FULL COURSE YELLOW";
+                                subText.innerText = "";
+                                display.style.backgroundColor = globalStatus.bg || "#ff9800";
+                                display.style.color = "#000000";
+                            } else if (step === 1) {
+                                mainText.innerText = "80 KM/H";
+                                subText.innerText = "";
+                                display.style.backgroundColor = "#000000";
+                                display.style.color = "#ffffff";
+                            } else if (step === 2) {
+                                mainText.innerText = "DON'T OVERTAKE";
+                                subText.innerText = "";
+                                display.style.backgroundColor = globalStatus.bg || "#ff9800";
+                                display.style.color = "#000000";
+                            } else if (step === 3) {
+                                mainText.innerText = "80 KM/H";
+                                subText.innerText = "";
+                                display.style.backgroundColor = "#000000";
+                                display.style.color = "#ffffff";
+                            }
+                            step = (step + 1) % 4;
+
+                        } else if (mode === 'yellow-blink') {
+                            if (step === 0) {
+                                mainText.innerText = "YELLOW FLAG";
+                                subText.innerText = "";
+                                display.style.backgroundColor = globalStatus.bg || "#ffc107";
+                                display.style.color = "#000000";
+                            } else {
+                                mainText.innerText = "80 KM/H";
+                                subText.innerText = "";
+                                display.style.backgroundColor = "#000000";
+                                display.style.color = "#ffffff";
+                            }
+                            step = (step + 1) % 2;
+
+                        } else if (mode === 'red-blink') {
+                            if (step === 0) {
+                                mainText.innerText = "RED FLAG";
+                                subText.innerText = "";
+                                display.style.backgroundColor = globalStatus.bg || "#dc3545";
+                                display.style.color = "#ffffff";
+                            } else {
+                                mainText.innerText = "BACK TO PIT";
+                                subText.innerText = "";
+                                display.style.backgroundColor = "#000000";
+                                display.style.color = "#ffffff";
+                            }
+                            step = (step + 1) % 2;
+
+                        } else {
+                            if (step === 0) {
+                                mainText.innerText = globalStatus.text;
+                                subText.innerText = globalStatus.subText || "";
+                                display.style.backgroundColor = globalStatus.bg;
+                                display.style.color = globalStatus.color || "#000000";
+                            } else {
+                                mainText.innerText = globalStatus.subText || globalStatus.text;
+                                subText.innerText = "";
+                                display.style.backgroundColor = "#000000";
+                                display.style.color = "#ffffff";
+                            }
+                            step = (step + 1) % 2;
+                        }
+                    }
+
+                    updateBlink();
+
+                    let intervalTime = 1500;
+                    if (mode === 'fcy') {
+                        intervalTime = 1700;
+                    }
+
+                    blinkInterval = setInterval(updateBlink, intervalTime);
+
+                } else {
+                    mainText.innerText = globalStatus.text || "WAITING...";
+                    subText.innerText = globalStatus.subText || "";
+                    display.style.backgroundColor = globalStatus.bg || "#333333";
+                    display.style.color = globalStatus.color || "#ffffff";
+                }
+            }
+        });
     </script>
 </body>
 </html>
