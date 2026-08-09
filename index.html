@@ -156,8 +156,9 @@
             max-height: 150px;
             overflow-y: auto;
             text-align: left;
-            font-size: 12px;
+            font-size: 13px;
             color: #ff8888;
+            line-height: 1.5;
         }
 
         .back-btn { background-color: #6c757d; color: white; margin-top: 15px; padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer; }
@@ -235,7 +236,7 @@
             </div>
             
             <div style="margin-top: 15px; border-top: 1px dashed #555; padding-top: 10px;">
-                <h4 style="font-size: 13px; color: #ff9999; margin-bottom: 5px;">REKAP PENALTI AKTIF:</h4>
+                <h4 style="font-size: 13px; color: #ff9999; margin-bottom: 5px;">REKAP HASIL PENALTI RACE:</h4>
                 <div id="penalty-log-container" class="penalty-log-box">
                     <i>Belum ada penalti aktif...</i>
                 </div>
@@ -285,7 +286,7 @@
 
         let myDriverNumber = localStorage.getItem('registered_driver_num') || "";
         let blinkInterval = null;
-        let penaltyNotifTimer = null; // Timer notifikasi driver 5 detik
+        let penaltyNotifTimer = null; 
         let currentDrivers = {};
         let currentBlueFlags = {};
         let currentPenalties = {};
@@ -491,6 +492,7 @@
             document.getElementById('penalty-modal').style.display = 'none';
         }
 
+        // AKUMULASI PENALTI DENGAN TIMESTAMP UPDATE UNTUK TRIGGER DRIVER 5 DETIK
         function applyPenalty(type, value) {
             if (!selectedPenDriver) return;
             
@@ -503,20 +505,17 @@
                 if (type === 'CLEAR') {
                     penaltyRef.remove();
                 } else if (type === 'TIME') {
-                    let newSeconds = 5;
-                    let titleText = "+5 SEC PENALTY";
+                    let totalSeconds = 5;
                     
                     if (currentPen && currentPen.type === 'TIME') {
-                        newSeconds = (currentPen.seconds || 0) + value;
-                        titleText = "+" + newSeconds + " SEC PENALTY";
+                        totalSeconds = (parseInt(currentPen.seconds) || 0) + value;
                     }
 
-                    // Tambahkan timestamp update agar driver selalu tahu ada penalti baru masuk
                     penaltyRef.set({
                         type: 'TIME',
-                        title: titleText,
-                        detail: "TIME PENALTY ADDED",
-                        seconds: newSeconds,
+                        title: "+" + totalSeconds + " SEC PENALTY",
+                        detail: "TIME PENALTY RECEIVED",
+                        seconds: totalSeconds,
                         updatedAt: Date.now()
                     });
                 } else if (type === 'DT') {
@@ -607,7 +606,7 @@
 
                 if (isPen) {
                     hasActivePenalty = true;
-                    logHtml += `• <b>#${d.number} ${d.name}</b>: <span style="color:#fff;">${currentPenalties[num].title}</span><br>`;
+                    logHtml += `• <b>#${d.number} ${d.name}</b>: <span style="color:#ffcc00; font-weight:bold;">${currentPenalties[num].title}</span><br>`;
                 }
             });
 
@@ -651,12 +650,14 @@
             renderDriverList();
         });
 
-        // TAMPILAN DRIVER
-        let lastPenTime = 0; // Menyimpan timestamp terakhir notifikasi dimunculkan
+        // LOGIKA PENAMPILAN BENDERA & NOTIFIKASI PENALTY DRIVER
+        let lastPenTime = 0; 
+        let globalDataCache = null;
 
         database.ref('race').on('value', function(snapshot) {
             const data = snapshot.val();
             if (!data) return;
+            globalDataCache = data;
 
             if (myDriverNumber && data.drivers && !data.drivers[myDriverNumber]) {
                 localStorage.removeItem('registered_driver_num');
@@ -666,9 +667,58 @@
                 return;
             }
 
-            const globalStatus = data.status || {};
-            const blueFlags = data.blue_flags || {};
             const penalties = data.penalties || {};
+            const myPenalty = myDriverNumber ? penalties[myDriverNumber] : null;
+            
+            // CEK APAKAH ADA UPDATE PENALTY BARU
+            if (myPenalty && myPenalty.updatedAt && myPenalty.updatedAt > lastPenTime) {
+                lastPenTime = myPenalty.updatedAt;
+
+                triggerPenaltyNotification(myPenalty);
+            } else if (!penaltyNotifTimer) {
+                renderNormalFlags();
+            }
+        });
+
+        function triggerPenaltyNotification(penaltyObj) {
+            const display = document.getElementById('flag-display');
+            const mainText = document.getElementById('main-text');
+            const subText = document.getElementById('sub-text');
+
+            if (!display || !mainText || !subText) return;
+
+            // Hentikan timer & interval sebelumnya jika ada
+            if (penaltyNotifTimer) clearTimeout(penaltyNotifTimer);
+            if (blinkInterval) clearInterval(blinkInterval);
+
+            let isRed = true;
+            mainText.innerText = penaltyObj.title || "PENALTY";
+            subText.innerText = penaltyObj.detail || "CHECK RACE CONTROL";
+
+            playWarningBeep();
+
+            // KEDIP MERAH SELAMA 5 DETIK
+            blinkInterval = setInterval(function() {
+                display.style.backgroundColor = isRed ? "#ff0000" : "#000000";
+                display.style.color = "#ffffff";
+                if (isRed) playWarningBeep();
+                isRed = !isRed;
+            }, 500);
+
+            // SETELAH 5 DETIK: KEMBALIKAN KE LAYAR BENDERA BIASE
+            penaltyNotifTimer = setTimeout(function() {
+                if (blinkInterval) clearInterval(blinkInterval);
+                blinkInterval = null;
+                penaltyNotifTimer = null;
+                renderNormalFlags();
+            }, 5000);
+        }
+
+        function renderNormalFlags() {
+            if (!globalDataCache) return;
+
+            const globalStatus = globalDataCache.status || {};
+            const blueFlags = globalDataCache.blue_flags || {};
 
             const display = document.getElementById('flag-display');
             const mainText = document.getElementById('main-text');
@@ -676,150 +726,111 @@
 
             if (!display || !mainText || !subText) return;
 
-            // Jika ada penalti baru masuk untuk driver ini
-            const myPenalty = myDriverNumber ? penalties[myDriverNumber] : null;
-            
-            if (myPenalty && myPenalty.updatedAt && myPenalty.updatedAt > lastPenTime) {
-                lastPenTime = myPenalty.updatedAt;
+            if (blinkInterval) {
+                clearInterval(blinkInterval);
+                blinkInterval = null;
+            }
 
-                // Reset timer notifikasi jika sebelumnya sudah berjalan
-                if (penaltyNotifTimer) clearTimeout(penaltyNotifTimer);
-                if (blinkInterval) clearInterval(blinkInterval);
-
-                // Jalankan Notifikasi Layar Merah Bipselama 5 Detik
-                let isRed = true;
-                mainText.innerText = myPenalty.title || "PENALTY";
-                subText.innerText = myPenalty.detail || "CHECK RACE CONTROL";
-
-                playWarningBeep();
-
+            if (myDriverNumber && blueFlags[myDriverNumber]) {
+                let isBlue = true;
+                mainText.innerText = "BLUE FLAG";
+                subText.innerText = "GIVE WAY TO LEADER!";
+                
                 blinkInterval = setInterval(function() {
-                    display.style.backgroundColor = isRed ? "#ff0000" : "#000000";
+                    display.style.backgroundColor = isBlue ? "#0044ff" : "#000000";
                     display.style.color = "#ffffff";
-                    if (isRed) playWarningBeep();
-                    isRed = !isRed;
+                    isBlue = !isBlue;
                 }, 500);
 
-                // SETELAH 5 DETIK: Hentikan notifikasi & kembalikan ke bendera biasa
-                penaltyNotifTimer = setTimeout(function() {
-                    if (blinkInterval) clearInterval(blinkInterval);
-                    blinkInterval = null;
-                    penaltyNotifTimer = null;
-                    renderNormalFlags();
-                }, 5000);
+            } else if (globalStatus.blink) {
+                let step = 0;
+                const mode = globalStatus.mode || 'standard';
 
-            } else if (!penaltyNotifTimer) {
-                // Jika tidak ada notifikasi penalti yang sedang tayang (5 detik), tampilkan bendera normal
-                renderNormalFlags();
-            }
-
-            function renderNormalFlags() {
-                if (blinkInterval) {
-                    clearInterval(blinkInterval);
-                    blinkInterval = null;
-                }
-
-                if (myDriverNumber && blueFlags[myDriverNumber]) {
-                    let isBlue = true;
-                    mainText.innerText = "BLUE FLAG";
-                    subText.innerText = "GIVE WAY TO LEADER!";
-                    
-                    blinkInterval = setInterval(function() {
-                        display.style.backgroundColor = isBlue ? "#0044ff" : "#000000";
-                        display.style.color = "#ffffff";
-                        isBlue = !isBlue;
-                    }, 500);
-
-                } else if (globalStatus.blink) {
-                    let step = 0;
-                    const mode = globalStatus.mode || 'standard';
-
-                    function updateBlink() {
-                        if (mode === 'fcy') {
-                            if (step === 0) {
-                                mainText.innerText = "FULL COURSE YELLOW";
-                                subText.innerText = "";
-                                display.style.backgroundColor = globalStatus.bg || "#ff9800";
-                                display.style.color = "#000000";
-                            } else if (step === 1) {
-                                mainText.innerText = "80 KM/H";
-                                subText.innerText = "";
-                                display.style.backgroundColor = "#000000";
-                                display.style.color = "#ffffff";
-                            } else if (step === 2) {
-                                mainText.innerText = "DON'T OVERTAKE";
-                                subText.innerText = "";
-                                display.style.backgroundColor = globalStatus.bg || "#ff9800";
-                                display.style.color = "#000000";
-                            } else if (step === 3) {
-                                mainText.innerText = "80 KM/H";
-                                subText.innerText = "";
-                                display.style.backgroundColor = "#000000";
-                                display.style.color = "#ffffff";
-                            }
-                            step = (step + 1) % 4;
-
-                        } else if (mode === 'yellow-blink') {
-                            if (step === 0) {
-                                mainText.innerText = "YELLOW FLAG";
-                                subText.innerText = "";
-                                display.style.backgroundColor = globalStatus.bg || "#ffc107";
-                                display.style.color = "#000000";
-                            } else {
-                                mainText.innerText = "80 KM/H";
-                                subText.innerText = "";
-                                display.style.backgroundColor = "#000000";
-                                display.style.color = "#ffffff";
-                            }
-                            step = (step + 1) % 2;
-
-                        } else if (mode === 'red-blink') {
-                            if (step === 0) {
-                                mainText.innerText = "RED FLAG";
-                                subText.innerText = "";
-                                display.style.backgroundColor = globalStatus.bg || "#dc3545";
-                                display.style.color = "#ffffff";
-                            } else {
-                                mainText.innerText = "BACK TO PIT";
-                                subText.innerText = "";
-                                display.style.backgroundColor = "#000000";
-                                display.style.color = "#ffffff";
-                            }
-                            step = (step + 1) % 2;
-
-                        } else {
-                            if (step === 0) {
-                                mainText.innerText = globalStatus.text;
-                                subText.innerText = globalStatus.subText || "";
-                                display.style.backgroundColor = globalStatus.bg;
-                                display.style.color = globalStatus.color || "#000000";
-                            } else {
-                                mainText.innerText = globalStatus.subText || globalStatus.text;
-                                subText.innerText = "";
-                                display.style.backgroundColor = "#000000";
-                                display.style.color = "#ffffff";
-                            }
-                            step = (step + 1) % 2;
-                        }
-                    }
-
-                    updateBlink();
-
-                    let intervalTime = 1500;
+                function updateBlink() {
                     if (mode === 'fcy') {
-                        intervalTime = 1700;
+                        if (step === 0) {
+                            mainText.innerText = "FULL COURSE YELLOW";
+                            subText.innerText = "";
+                            display.style.backgroundColor = globalStatus.bg || "#ff9800";
+                            display.style.color = "#000000";
+                        } else if (step === 1) {
+                            mainText.innerText = "80 KM/H";
+                            subText.innerText = "";
+                            display.style.backgroundColor = "#000000";
+                            display.style.color = "#ffffff";
+                        } else if (step === 2) {
+                            mainText.innerText = "DON'T OVERTAKE";
+                            subText.innerText = "";
+                            display.style.backgroundColor = globalStatus.bg || "#ff9800";
+                            display.style.color = "#000000";
+                        } else if (step === 3) {
+                            mainText.innerText = "80 KM/H";
+                            subText.innerText = "";
+                            display.style.backgroundColor = "#000000";
+                            display.style.color = "#ffffff";
+                        }
+                        step = (step + 1) % 4;
+
+                    } else if (mode === 'yellow-blink') {
+                        if (step === 0) {
+                            mainText.innerText = "YELLOW FLAG";
+                            subText.innerText = "";
+                            display.style.backgroundColor = globalStatus.bg || "#ffc107";
+                            display.style.color = "#000000";
+                        } else {
+                            mainText.innerText = "80 KM/H";
+                            subText.innerText = "";
+                            display.style.backgroundColor = "#000000";
+                            display.style.color = "#ffffff";
+                        }
+                        step = (step + 1) % 2;
+
+                    } else if (mode === 'red-blink') {
+                        if (step === 0) {
+                            mainText.innerText = "RED FLAG";
+                            subText.innerText = "";
+                            display.style.backgroundColor = globalStatus.bg || "#dc3545";
+                            display.style.color = "#ffffff";
+                        } else {
+                            mainText.innerText = "BACK TO PIT";
+                            subText.innerText = "";
+                            display.style.backgroundColor = "#000000";
+                            display.style.color = "#ffffff";
+                        }
+                        step = (step + 1) % 2;
+
+                    } else {
+                        if (step === 0) {
+                            mainText.innerText = globalStatus.text;
+                            subText.innerText = globalStatus.subText || "";
+                            display.style.backgroundColor = globalStatus.bg;
+                            display.style.color = globalStatus.color || "#000000";
+                        } else {
+                            mainText.innerText = globalStatus.subText || globalStatus.text;
+                            subText.innerText = "";
+                            display.style.backgroundColor = "#000000";
+                            display.style.color = "#ffffff";
+                        }
+                        step = (step + 1) % 2;
                     }
-
-                    blinkInterval = setInterval(updateBlink, intervalTime);
-
-                } else {
-                    mainText.innerText = globalStatus.text || "WAITING...";
-                    subText.innerText = globalStatus.subText || "";
-                    display.style.backgroundColor = globalStatus.bg || "#333333";
-                    display.style.color = globalStatus.color || "#ffffff";
                 }
+
+                updateBlink();
+
+                let intervalTime = 1500;
+                if (mode === 'fcy') {
+                    intervalTime = 1700;
+                }
+
+                blinkInterval = setInterval(updateBlink, intervalTime);
+
+            } else {
+                mainText.innerText = globalStatus.text || "WAITING...";
+                subText.innerText = globalStatus.subText || "";
+                display.style.backgroundColor = globalStatus.bg || "#333333";
+                display.style.color = globalStatus.color || "#ffffff";
             }
-        });
+        }
     </script>
 </body>
 </html>
