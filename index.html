@@ -83,6 +83,21 @@
             background-color: #333; 
         }
 
+        /* STYLE POLA PAPAN CATUR UNTUK FINISH */
+        .chequered-pattern {
+            background-image: repeating-conic-gradient(#000000 0% 25%, #ffffff 0% 50%) !important;
+            background-position: 0 0, 30px 30px !important;
+            background-size: 60px 60px !important;
+        }
+
+        .chequered-text-box {
+            background-color: rgba(0, 0, 0, 0.85);
+            padding: 15px 25px;
+            border-radius: 10px;
+            border: 2px solid #fff;
+            color: #ffffff !important;
+        }
+
         .sub-text-display {
             font-size: clamp(12px, 4vw, 18px);
             font-weight: bold;
@@ -107,21 +122,40 @@
             border: 1px solid #444;
         }
 
+        /* LAYOUT COMPACT GRID 2 KOLOM UNTUK ADMIN */
+        .admin-grid-flags {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+
+        .flag-btn-compact { 
+            width: 100%; 
+            padding: 10px 4px; 
+            font-size: 12px; 
+            font-weight: bold; 
+            border: none; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            text-align: center;
+        }
+
         .flag-btn { width: 90%; max-width: 350px; padding: 14px; margin: 8px auto; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; display: block; }
         .green { background-color: #28a745; color: white; }
-        .yellow-admin { background-color: #ffc107; color: #ffffff; } 
+        .formation-admin { background-color: #ffc107; color: #000000; } 
         .fcy-admin { background-color: #ff9800; color: #ffffff; }     
         .red { background-color: #dc3545; color: white; }
-        .finish { background-color: #000; color: white; border: 2px solid #fff; }
+        .finish { background-color: #000; color: white; border: 1px solid #fff; }
         .clear { background-color: #333; color: white; border: 1px solid #555; }
         
         .admin-section {
             background: #1a233a;
             border: 1px solid #2a3b66;
-            padding: 15px;
+            padding: 12px;
             border-radius: 10px;
-            margin: 15px auto;
-            width: 90%;
+            margin: 10px auto;
+            width: 95%;
             max-width: 350px;
         }
 
@@ -129,9 +163,10 @@
             background-color: #0056b3;
             color: white;
             border: none;
-            padding: 10px 15px;
-            margin: 5px;
+            padding: 8px 12px;
+            margin: 3px;
             border-radius: 5px;
+            font-size: 12px;
             font-weight: bold;
             cursor: pointer;
         }
@@ -140,9 +175,10 @@
             background-color: #d32f2f;
             color: white;
             border: none;
-            padding: 10px 15px;
-            margin: 5px;
+            padding: 8px 12px;
+            margin: 3px;
             border-radius: 5px;
+            font-size: 12px;
             font-weight: bold;
             cursor: pointer;
         }
@@ -151,17 +187,17 @@
             background: #111;
             border: 1px solid #444;
             border-radius: 6px;
-            padding: 10px;
-            margin-top: 10px;
-            max-height: 150px;
+            padding: 8px;
+            margin-top: 8px;
+            max-height: 120px;
             overflow-y: auto;
             text-align: left;
-            font-size: 13px;
+            font-size: 12px;
             color: #ff8888;
-            line-height: 1.5;
+            line-height: 1.4;
         }
 
-        .back-btn { background-color: #6c757d; color: white; margin-top: 15px; padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer; }
+        .back-btn { background-color: #6c757d; color: white; margin-top: 10px; padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer; }
         .reset-btn { background-color: #dc3545; color: white; padding: 8px 14px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 10px; }
     </style>
 </head>
@@ -208,53 +244,50 @@
 
     <!-- 4. HALAMAN ADMIN -->
     <div id="admin-page" class="page">
-        <h2>Panel Race Director</h2>
+        <h2 style="font-size:18px;">Panel Race Director</h2>
         
         <!-- PENGATURAN STATUS LOBBY -->
         <div class="admin-section" style="border-color: #00ffcc;">
-            <h3 style="color:#00ffcc;">PENGATURAN LOBBY</h3>
-            <div>
-                <label style="font-size:12px; color:#aaa;">Status Lobby Pendaftaran:</label>
-                <div id="display-lobby-status" style="font-size:14px; font-weight:bold; margin:5px 0;">MENGAMBIL DATA...</div>
-                <button id="toggle-lobby-btn" class="back-btn" style="padding:8px 14px; font-weight:bold;" onclick="toggleLobbyLock()">UBAH STATUS LOBBY</button>
-            </div>
+            <h3 style="color:#00ffcc; font-size:14px; margin-bottom:5px;">STATUS LOBBY</h3>
+            <div id="display-lobby-status" style="font-size:12px; font-weight:bold; margin:3px 0;">MENGAMBIL DATA...</div>
+            <button id="toggle-lobby-btn" class="back-btn" style="padding:5px 10px; font-size:11px; font-weight:bold;" onclick="toggleLobbyLock()">UBAH STATUS</button>
         </div>
 
-        <button class="flag-btn green" onclick="setGlobalFlag('GREEN FLAG', '', '#28a745', '#ffffff', false, 'standard')">GREEN FLAG</button>
-        <button class="flag-btn yellow-admin" onclick="setGlobalFlag('YELLOW FLAG', 'LIMIT 80 KM/H', '#ffc107', '#000000', true, 'yellow-blink')">YELLOW FLAG</button>
-        <button class="flag-btn fcy-admin" onclick="setGlobalFlag('FULL COURSE YELLOW', '80 KM/H', '#ff9800', '#000000', true, 'fcy')">FCY</button>
-        <button class="flag-btn red" onclick="setGlobalFlag('RED FLAG', 'BACK TO PIT', '#dc3545', '#ffffff', true, 'red-blink')">RED FLAG</button>
-        <button class="flag-btn finish" onclick="setGlobalFlag('FINISH / CHEQUERED', '', '#000000', '#ffffff', false, 'standard')">FINISH</button>
-        <button class="flag-btn clear" onclick="setGlobalFlag('TRACK CLEAR', '', '#333333', '#ffffff', false, 'standard')">TRACK CLEAR</button>
+        <!-- BENDERA UTAMA ADMIN (COMPACT GRID 2 KOLOM) -->
+        <div class="admin-grid-flags">
+            <button class="flag-btn-compact green" onclick="setGlobalFlag('GREEN FLAG', '', '#28a745', '#ffffff', false, 'standard')">GREEN FLAG</button>
+            <button class="flag-btn-compact formation-admin" onclick="setGlobalFlag('FORMATION LAP', '', '#ffc107', '#000000', true, 'formation')">FORMATION LAP</button>
+            <button class="flag-btn-compact fcy-admin" onclick="setGlobalFlag('FULL COURSE YELLOW', '80 KM/H', '#ff9800', '#000000', true, 'fcy')">FCY (80 KM/H)</button>
+            <button class="flag-btn-compact red" onclick="setGlobalFlag('RED FLAG', 'BACK TO PIT', '#dc3545', '#ffffff', true, 'red-blink')">RED FLAG</button>
+        </div>
+        <div class="admin-grid-flags">
+            <button class="flag-btn-compact finish" onclick="setGlobalFlag('FINISH / CHEQUERED', '', 'chequered', '#ffffff', false, 'standard')">FINISH</button>
+            <button class="flag-btn-compact clear" onclick="setGlobalFlag('TRACK CLEAR', '', '#333333', '#ffffff', false, 'standard')">TRACK CLEAR</button>
+        </div>
 
         <!-- FITUR PENALTY TARGET & LIST -->
         <div class="admin-section" style="border-color: #ff3333;">
-            <h3 style="color:#ff4444;">PENALTY CONTROL</h3>
-            <p style="font-size:12px; color:#ccc; margin-bottom:10px;">Klik driver untuk beri Penalti:</p>
+            <h3 style="color:#ff4444; font-size:14px; margin-bottom:5px;">PENALTY CONTROL</h3>
             <div id="penalty-buttons-list">
-                <i style="font-size:12px; color:#888;">Belum ada driver...</i>
+                <i style="font-size:11px; color:#888;">Belum ada driver...</i>
             </div>
             
-            <div style="margin-top: 15px; border-top: 1px dashed #555; padding-top: 10px;">
-                <h4 style="font-size: 13px; color: #ff9999; margin-bottom: 5px;">REKAP HASIL PENALTI RACE:</h4>
+            <div style="margin-top: 10px; border-top: 1px dashed #555; padding-top: 5px;">
+                <h4 style="font-size: 11px; color: #ff9999; margin-bottom: 3px;">REKAP HASIL PENALTI:</h4>
                 <div id="penalty-log-container" class="penalty-log-box">
                     <i>Belum ada penalti aktif...</i>
                 </div>
             </div>
-            <br>
-            <button class="back-btn" style="background:#ff3333; color:#fff;" onclick="clearAllPenalties()">Reset Semua Penalti</button>
+            <button class="back-btn" style="background:#ff3333; color:#fff; padding:4px 8px; font-size:11px; margin-top:8px;" onclick="clearAllPenalties()">Reset Semua Penalti</button>
         </div>
 
         <div class="admin-section">
-            <h3 style="color:#00aaff;">BLUE FLAG TARGET</h3>
-            <p style="font-size:12px; color:#ccc; margin-bottom:10px;">Pilih driver yang harus memberi jalan:</p>
+            <h3 style="color:#00aaff; font-size:14px; margin-bottom:5px;">BLUE FLAG TARGET</h3>
             <div id="driver-buttons-list">
-                <i style="font-size:12px; color:#888;">Belum ada driver terhubung...</i>
+                <i style="font-size:11px; color:#888;">Belum ada driver terhubung...</i>
             </div>
-            <br>
-            <button class="back-btn" style="background:#ff9800; color:#000;" onclick="clearAllBlueFlags()">Reset Status Blue Flag</button>
-            <br>
-            <button class="reset-btn" onclick="removeAllDrivers()">Hapus/Reset Daftar Driver</button>
+            <button class="back-btn" style="background:#ff9800; color:#000; padding:4px 8px; font-size:11px; margin-top:8px;" onclick="clearAllBlueFlags()">Reset Blue Flags</button>
+            <button class="reset-btn" style="padding:4px 8px; font-size:11px; margin-top:5px;" onclick="removeAllDrivers()">Reset Daftar Driver</button>
         </div>
 
         <button class="back-btn" onclick="showPage('home-menu')">Kembali ke Menu</button>
@@ -263,8 +296,10 @@
     <!-- 5. HALAMAN BENDERA DRIVER -->
     <div id="driver-page" class="page">
         <div id="flag-display">
-            <div id="main-text">WAITING...</div>
-            <div id="sub-text" class="sub-text-display"></div>
+            <div id="text-wrapper">
+                <div id="main-text">WAITING...</div>
+                <div id="sub-text" class="sub-text-display"></div>
+            </div>
         </div>
     </div>
 
@@ -492,7 +527,6 @@
             document.getElementById('penalty-modal').style.display = 'none';
         }
 
-        // AKUMULASI PENALTI DENGAN TIMESTAMP UPDATE UNTUK TRIGGER DRIVER 5 DETIK
         function applyPenalty(type, value) {
             if (!selectedPenDriver) return;
             
@@ -513,7 +547,8 @@
 
                     penaltyRef.set({
                         type: 'TIME',
-                        title: "+" + totalSeconds + " SEC PENALTY",
+                        notifTitle: "+5 SEC PENALTY",
+                        adminTitle: "+" + totalSeconds + " SEC PENALTY",
                         detail: "TIME PENALTY RECEIVED",
                         seconds: totalSeconds,
                         updatedAt: Date.now()
@@ -521,7 +556,8 @@
                 } else if (type === 'DT') {
                     penaltyRef.set({
                         type: 'DT',
-                        title: "DRIVE THROUGH",
+                        notifTitle: "DRIVE THROUGH",
+                        adminTitle: "DRIVE THROUGH",
                         detail: "PIT LANE PENALTY",
                         seconds: 0,
                         updatedAt: Date.now()
@@ -571,8 +607,8 @@
                     myDriverNumber = "";
                     showPage('home-menu');
                 }
-                listDiv.innerHTML = '<i style="font-size:12px; color:#888;">Belum ada driver terhubung...</i>';
-                penDiv.innerHTML = '<i style="font-size:12px; color:#888;">Belum ada driver...</i>';
+                listDiv.innerHTML = '<i style="font-size:11px; color:#888;">Belum ada driver terhubung...</i>';
+                penDiv.innerHTML = '<i style="font-size:11px; color:#888;">Belum ada driver...</i>';
                 logBox.innerHTML = '<i>Belum ada penalti aktif...</i>';
                 return;
             }
@@ -600,13 +636,14 @@
                 pBtn.className = 'driver-pen-btn';
                 pBtn.style.backgroundColor = isPen ? '#ff1744' : '#616161';
                 pBtn.style.color = '#fff';
-                pBtn.innerText = '#' + d.number + ' - ' + d.name + (isPen ? ' (' + currentPenalties[num].title + ')' : '');
+                pBtn.innerText = '#' + d.number + ' - ' + d.name + (isPen ? ' (' + (currentPenalties[num].adminTitle || currentPenalties[num].title) + ')' : '');
                 pBtn.onclick = function() { openPenaltyModal(d.number); };
                 penDiv.appendChild(pBtn);
 
                 if (isPen) {
                     hasActivePenalty = true;
-                    logHtml += `• <b>#${d.number} ${d.name}</b>: <span style="color:#ffcc00; font-weight:bold;">${currentPenalties[num].title}</span><br>`;
+                    const displayTitle = currentPenalties[num].adminTitle || currentPenalties[num].title;
+                    logHtml += `• <b>#${d.number} ${d.name}</b>: <span style="color:#ffcc00; font-weight:bold;">${displayTitle}</span><br>`;
                 }
             });
 
@@ -626,11 +663,11 @@
             const lobbyBtn = document.getElementById('toggle-lobby-btn');
 
             if (lobbyDisplay) {
-                lobbyDisplay.innerText = isLobbyOpen ? "TERBUKA (Bisa Daftar)" : "TERKUNCI (Ditutup)";
+                lobbyDisplay.innerText = isLobbyOpen ? "TERBUKA" : "TERKUNCI";
                 lobbyDisplay.style.color = isLobbyOpen ? "#28a745" : "#dc3545";
             }
             if (lobbyBtn) {
-                lobbyBtn.innerText = isLobbyOpen ? "KUNCI LOBBY SEKARANG" : "BUKA KEMBALI LOBBY";
+                lobbyBtn.innerText = isLobbyOpen ? "KUNCI LOBBY" : "BUKA LOBBY";
                 lobbyBtn.style.backgroundColor = isLobbyOpen ? "#dc3545" : "#28a745";
             }
         });
@@ -670,7 +707,6 @@
             const penalties = data.penalties || {};
             const myPenalty = myDriverNumber ? penalties[myDriverNumber] : null;
             
-            // CEK APAKAH ADA UPDATE PENALTY BARU
             if (myPenalty && myPenalty.updatedAt && myPenalty.updatedAt > lastPenTime) {
                 lastPenTime = myPenalty.updatedAt;
 
@@ -684,20 +720,22 @@
             const display = document.getElementById('flag-display');
             const mainText = document.getElementById('main-text');
             const subText = document.getElementById('sub-text');
+            const textWrapper = document.getElementById('text-wrapper');
 
             if (!display || !mainText || !subText) return;
 
-            // Hentikan timer & interval sebelumnya jika ada
-            if (penaltyNotifTimer) clearTimeout(penaltyNotifTimer);
             if (blinkInterval) clearInterval(blinkInterval);
+            if (penaltyNotifTimer) clearTimeout(penaltyNotifTimer);
+
+            display.classList.remove('chequered-pattern');
+            textWrapper.classList.remove('chequered-text-box');
 
             let isRed = true;
-            mainText.innerText = penaltyObj.title || "PENALTY";
+            mainText.innerText = penaltyObj.notifTitle || penaltyObj.title || "+5 SEC PENALTY";
             subText.innerText = penaltyObj.detail || "CHECK RACE CONTROL";
 
             playWarningBeep();
 
-            // KEDIP MERAH SELAMA 5 DETIK
             blinkInterval = setInterval(function() {
                 display.style.backgroundColor = isRed ? "#ff0000" : "#000000";
                 display.style.color = "#ffffff";
@@ -705,7 +743,6 @@
                 isRed = !isRed;
             }, 500);
 
-            // SETELAH 5 DETIK: KEMBALIKAN KE LAYAR BENDERA BIASE
             penaltyNotifTimer = setTimeout(function() {
                 if (blinkInterval) clearInterval(blinkInterval);
                 blinkInterval = null;
@@ -723,6 +760,7 @@
             const display = document.getElementById('flag-display');
             const mainText = document.getElementById('main-text');
             const subText = document.getElementById('sub-text');
+            const textWrapper = document.getElementById('text-wrapper');
 
             if (!display || !mainText || !subText) return;
 
@@ -730,6 +768,10 @@
                 clearInterval(blinkInterval);
                 blinkInterval = null;
             }
+
+            // RESET PATTERN CHEQUERED SETIAP KALI RENDER BENDERA LAIN
+            display.classList.remove('chequered-pattern');
+            textWrapper.classList.remove('chequered-text-box');
 
             if (myDriverNumber && blueFlags[myDriverNumber]) {
                 let isBlue = true;
@@ -747,7 +789,32 @@
                 const mode = globalStatus.mode || 'standard';
 
                 function updateBlink() {
-                    if (mode === 'fcy') {
+                    if (mode === 'formation') {
+                        // SEQUENTIAL FORMATION LAP ANIMATION
+                        if (step === 0) {
+                            mainText.innerText = "FORMATION LAP";
+                            subText.innerText = "";
+                            display.style.backgroundColor = "#ffc107"; // Kuning
+                            display.style.color = "#000000";           // Teks Hitam
+                        } else if (step === 1) {
+                            mainText.innerText = "KEEP YOUR SPEED UNDER 80KMH";
+                            subText.innerText = "";
+                            display.style.backgroundColor = "#000000"; // Hitam
+                            display.style.color = "#ffffff";           // Teks Putih
+                        } else if (step === 2) {
+                            mainText.innerText = "NO OVERTAKING";
+                            subText.innerText = "";
+                            display.style.backgroundColor = "#ffc107"; // Kuning
+                            display.style.color = "#000000";           // Teks Hitam
+                        } else if (step === 3) {
+                            mainText.innerText = "KEEP YOUR SPEED UNDER 80KMH";
+                            subText.innerText = "";
+                            display.style.backgroundColor = "#000000"; // Hitam
+                            display.style.color = "#ffffff";           // Teks Putih
+                        }
+                        step = (step + 1) % 4;
+
+                    } else if (mode === 'fcy') {
                         if (step === 0) {
                             mainText.innerText = "FULL COURSE YELLOW";
                             subText.innerText = "";
@@ -770,20 +837,6 @@
                             display.style.color = "#ffffff";
                         }
                         step = (step + 1) % 4;
-
-                    } else if (mode === 'yellow-blink') {
-                        if (step === 0) {
-                            mainText.innerText = "YELLOW FLAG";
-                            subText.innerText = "";
-                            display.style.backgroundColor = globalStatus.bg || "#ffc107";
-                            display.style.color = "#000000";
-                        } else {
-                            mainText.innerText = "80 KM/H";
-                            subText.innerText = "";
-                            display.style.backgroundColor = "#000000";
-                            display.style.color = "#ffffff";
-                        }
-                        step = (step + 1) % 2;
 
                     } else if (mode === 'red-blink') {
                         if (step === 0) {
@@ -818,17 +871,25 @@
                 updateBlink();
 
                 let intervalTime = 1500;
-                if (mode === 'fcy') {
-                    intervalTime = 1700;
+                if (mode === 'fcy' || mode === 'formation') {
+                    intervalTime = 1600;
                 }
 
                 blinkInterval = setInterval(updateBlink, intervalTime);
 
             } else {
-                mainText.innerText = globalStatus.text || "WAITING...";
-                subText.innerText = globalStatus.subText || "";
-                display.style.backgroundColor = globalStatus.bg || "#333333";
-                display.style.color = globalStatus.color || "#ffffff";
+                if (globalStatus.bg === 'chequered') {
+                    // JIKA STATUS FINISH / CHEQUERED -> TERAPKAN POLA PAPAN CATUR
+                    display.classList.add('chequered-pattern');
+                    textWrapper.classList.add('chequered-text-box');
+                    mainText.innerText = "FINISH / CHEQUERED";
+                    subText.innerText = "";
+                } else {
+                    mainText.innerText = globalStatus.text || "WAITING...";
+                    subText.innerText = globalStatus.subText || "";
+                    display.style.backgroundColor = globalStatus.bg || "#333333";
+                    display.style.color = globalStatus.color || "#ffffff";
+                }
             }
         }
     </script>
